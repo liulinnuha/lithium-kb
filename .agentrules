@@ -1,0 +1,5 @@
+# lithium-kb Agent Directives
+1. Zero Runtime Dependencies: Always use Node.js standard library (node:*).
+2. Deterministic Knowledge Generation: Never emit dynamic timestamps or session headers in PROJECT_KB.md or .agent-kb/ files to avoid unnecessary git diff churn.
+3. Modular Memory: Keep .agent-kb/ organized under architecture/, debug/, tasks/, features/.
+4. Comprehensive Testing: Keep test coverage using Node's native test runner (node --test).

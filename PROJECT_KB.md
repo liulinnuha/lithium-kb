@@ -1,7 +1,5 @@
 # Project Knowledge Base: lithium-kb
 
-> Generated on 2026-08-16 | Branch: `master` | Stack: **Node.js / JavaScript / TypeScript**
-
 ## 1. Overview
 - **Description:** Fast, in-memory structured markdown knowledge base (.agent-kb/) with 2D neural graph visualization, live SSE activity stream, and MCP stdio integration.
 - **Root:** `lithium-kb`
@@ -141,3 +139,13 @@ class AgentRouter {
 ## 6. Agent Navigation Rules
 1. **Surgical Memory**: Read `.agent-kb/tasks/`, `.agent-kb/debug/`, or `.agent-kb/features/` doc before code crawling.
 2. **Record Learnings**: When fixing bugs, save to `.agent-kb/debug/N.<issue>.md`. When finishing tasks, update `.agent-kb/tasks/`.
+3. **Deterministic Output**: Do not emit dynamic date timestamps or ephemeral session headers in generated knowledge files.
+
+### Custom Project Directives (.agentrules)
+```text
+# lithium-kb Agent Directives
+1. Zero Runtime Dependencies: Always use Node.js standard library (node:*).
+2. Deterministic Knowledge Generation: Never emit dynamic timestamps or session headers in PROJECT_KB.md or .agent-kb/ files to avoid unnecessary git diff churn.
+3. Modular Memory: Keep .agent-kb/ organized under architecture/, debug/, tasks/, features/.
+4. Comprehensive Testing: Keep test coverage using Node's native test runner (node --test).
+```

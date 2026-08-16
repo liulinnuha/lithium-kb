@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
 import { KB_DIR_NAME, KB_CATEGORIES } from './constants.js';
 import {
   detectProjectType,
@@ -169,13 +168,7 @@ export function generateMarkdownKB(cwd) {
   const files = items.filter(i => i.type === 'file' && !i.path.startsWith(KB_DIR_NAME));
   const symbols = extractKeySymbols(cwd, files);
 
-  let gitBranch = 'N/A';
-  try {
-    gitBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
-  } catch {}
-
   let md = `# Project Knowledge Base: ${rootName}\n\n`;
-  md += `> Generated on ${new Date().toISOString().split('T')[0]} | Branch: \`${gitBranch}\` | Stack: **${projectType}**\n\n`;
 
   // 1. Overview
   md += `## 1. Overview\n`;
@@ -225,6 +218,7 @@ export function generateMarkdownKB(cwd) {
   md += `## 6. Agent Navigation Rules\n`;
   md += `1. **Surgical Memory**: Read \`.agent-kb/tasks/\`, \`.agent-kb/debug/\`, or \`.agent-kb/features/\` doc before code crawling.\n`;
   md += `2. **Record Learnings**: When fixing bugs, save to \`.agent-kb/debug/N.<issue>.md\`. When finishing tasks, update \`.agent-kb/tasks/\`.\n`;
+  md += `3. **Deterministic Output**: Do not emit dynamic date timestamps or ephemeral session headers in generated knowledge files.\n`;
 
   if (customRules) {
     md += `\n### Custom Project Directives (.agentrules)\n\`\`\`text\n${customRules}\n\`\`\`\n`;
@@ -237,7 +231,6 @@ export function generateMarkdownKB(cwd) {
     markdown: md,
     rootName,
     projectType,
-    gitBranch,
     docs,
     filesCount: files.length,
     graph: buildNeuralGraphData(cwd)
