@@ -43,37 +43,39 @@ your-project/
 
 ---
 
-## 🚀 Quickstart
+## 📦 Installation & Usage
 
-### 1. Generate / Sync Project Knowledge Base
+### Method 1: Instant Run (Zero Install — Recommended)
+Run directly inside any project without installing anything:
 ```bash
+# Generate / Sync knowledge base (.agent-kb/ and PROJECT_KB.md)
 npx @liulinnuha/lithium-kb
-```
-Generates `PROJECT_KB.md` and initializes `.agent-kb/{architecture,debug,tasks,features}` if not present.
 
-### 2. Launch Neural Network UI
-```bash
+# Open Neural Graph Web UI (port 3030)
 npx @liulinnuha/lithium-kb --ui
-```
-Opens interactive graph visualizer at `http://localhost:3030`.
 
-### 3. Auto-Watch Mode
-```bash
+# Auto-watch for file changes and sync live
 npx @liulinnuha/lithium-kb --watch
-```
-Automatically updates knowledge base whenever files in the repository change.
 
-### 4. Model Context Protocol (MCP) Server
-```bash
+# Launch MCP stdio server for AI coding agents
 npx @liulinnuha/lithium-kb --mcp
 ```
-Starts stdio JSON-RPC 2.0 MCP server for direct integration into agent harnesses.
+
+### Method 2: Global CLI Installation
+Install globally on your machine to use `lithium-kb` anywhere:
+```bash
+npm install -g @liulinnuha/lithium-kb
+
+# Then run anywhere:
+lithium-kb --ui
+```
 
 ---
 
-## 🔌 MCP Integration Config
+## 🔌 Agent MCP Integration (Claude Desktop, Cursor, Pi)
 
-### Claude Desktop (`claude_desktop_config.json`)
+Add this to your Claude Desktop config (`claude_desktop_config.json`) or Cursor MCP settings:
+
 ```json
 {
   "mcpServers": {
@@ -84,9 +86,6 @@ Starts stdio JSON-RPC 2.0 MCP server for direct integration into agent harnesses
   }
 }
 ```
-
-### Pi Coding Agent / Cursor
-Register `npx -y @liulinnuha/lithium-kb --mcp` as an MCP stdio server.
 
 ---
 
