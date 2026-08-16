@@ -1,0 +1,47 @@
+{
+  "name": "lithium-kb",
+  "version": "1.1.0",
+  "description": "Fast markdown knowledge base generator and agent skill with interactive Neural Network Graph for token-efficient coding agents",
+  "type": "module",
+  "main": "src/core/generator.js",
+  "types": "src/core/types.d.ts",
+  "exports": {
+    ".": "./src/core/generator.js",
+    "./scanner": "./src/core/scanner.js",
+    "./server": "./src/server/http.js",
+    "./mcp": "./src/mcp/server.js"
+  },
+  "bin": {
+    "lithium-kb": "./bin/agent-kb.js",
+    "agent-kb": "./bin/agent-kb.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "SKILL.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "test:watch": "node --test --watch",
+    "start": "node ./bin/agent-kb.js --ui",
+    "generate": "node ./bin/agent-kb.js",
+    "ui": "node ./bin/agent-kb.js --ui",
+    "watch": "node ./bin/agent-kb.js --watch",
+    "mcp": "node ./bin/agent-kb.js --mcp"
+  },
+  "keywords": [
+    "ai-agent",
+    "agent-skill",
+    "mcp",
+    "context-optimization",
+    "knowledge-base",
+    "neural-graph",
+    "claude",
+    "cursor",
+    "pi"
+  ],
+  "author": "liulinnuha",
+  "license": "MIT"
+}
