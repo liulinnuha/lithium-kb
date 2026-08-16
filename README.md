@@ -1,6 +1,7 @@
 # ⚡ lithium-kb: Structured Agent Knowledge Base & Neural Graph
 
 [![npm version](https://img.shields.io/npm/v/%40liulinnuha%2Flithium-kb.svg?color=cb3837&logo=npm)](https://www.npmjs.com/package/@liulinnuha/lithium-kb)
+[![GitHub Packages](https://img.shields.io/badge/GitHub%20Packages-%40liulinnuha%2Flithium--kb-blue.svg?logo=github)](https://github.com/liulinnuha/lithium-kb/packages)
 [![GitHub](https://img.shields.io/badge/GitHub-liulinnuha%2Flithium--kb-181717.svg?logo=github)](https://github.com/liulinnuha/lithium-kb)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-blue.svg)](package.json)
