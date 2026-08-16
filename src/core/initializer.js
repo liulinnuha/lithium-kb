@@ -174,10 +174,8 @@ function injectMcpConfig(target) {
     if (target.type === 'zedContextServers') {
       data.context_servers = data.context_servers || {};
       data.context_servers['lithium-kb'] = {
-        command: {
-          path: MCP_COMMAND,
-          args: MCP_ARGS
-        }
+        command: MCP_COMMAND,
+        args: MCP_ARGS
       };
     } else {
       data.mcpServers = data.mcpServers || {};
