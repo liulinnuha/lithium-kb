@@ -39,14 +39,14 @@ your-project/
 
 ```bash
 # Generate / sync structured knowledge base
-npx lithium-kb
+npx @liulinnuha/lithium-kb
 
 # Open Neural Graph Web UI (port 3030)
-npx lithium-kb --ui
+npx @liulinnuha/lithium-kb --ui
 
 # Auto-update knowledge base on file changes
-npx lithium-kb --watch
+npx @liulinnuha/lithium-kb --watch
 
 # Start MCP stdio server for Claude Desktop / Cursor / Pi
-npx lithium-kb --mcp
+npx @liulinnuha/lithium-kb --mcp
 ```

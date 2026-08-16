@@ -1,6 +1,6 @@
 # ⚡ lithium-kb: Structured Agent Knowledge Base & Neural Graph
 
-[![npm version](https://img.shields.io/npm/v/lithium-kb.svg?color=cb3837&logo=npm)](https://www.npmjs.com/package/lithium-kb)
+[![npm version](https://img.shields.io/npm/v/%40liulinnuha%2Flithium-kb.svg?color=cb3837&logo=npm)](https://www.npmjs.com/package/@liulinnuha/lithium-kb)
 [![GitHub](https://img.shields.io/badge/GitHub-liulinnuha%2Flithium--kb-181717.svg?logo=github)](https://github.com/liulinnuha/lithium-kb)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-blue.svg)](package.json)
@@ -47,25 +47,25 @@ your-project/
 
 ### 1. Generate / Sync Project Knowledge Base
 ```bash
-npx lithium-kb
+npx @liulinnuha/lithium-kb
 ```
 Generates `PROJECT_KB.md` and initializes `.agent-kb/{architecture,debug,tasks,features}` if not present.
 
 ### 2. Launch Neural Network UI
 ```bash
-npx lithium-kb --ui
+npx @liulinnuha/lithium-kb --ui
 ```
 Opens interactive graph visualizer at `http://localhost:3030`.
 
 ### 3. Auto-Watch Mode
 ```bash
-npx lithium-kb --watch
+npx @liulinnuha/lithium-kb --watch
 ```
 Automatically updates knowledge base whenever files in the repository change.
 
 ### 4. Model Context Protocol (MCP) Server
 ```bash
-npx lithium-kb --mcp
+npx @liulinnuha/lithium-kb --mcp
 ```
 Starts stdio JSON-RPC 2.0 MCP server for direct integration into agent harnesses.
 
@@ -79,14 +79,14 @@ Starts stdio JSON-RPC 2.0 MCP server for direct integration into agent harnesses
   "mcpServers": {
     "lithium-kb": {
       "command": "npx",
-      "args": ["lithium-kb", "--mcp"]
+      "args": ["-y", "@liulinnuha/lithium-kb", "--mcp"]
     }
   }
 }
 ```
 
 ### Pi Coding Agent / Cursor
-Register `npx lithium-kb --mcp` as an MCP stdio server.
+Register `npx -y @liulinnuha/lithium-kb --mcp` as an MCP stdio server.
 
 ---
 
