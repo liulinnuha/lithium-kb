@@ -17,10 +17,10 @@
 
 ## 3. Common Commands
 ```sh
-npm run start # node bin/agent-kb.js --ui
-npm run generate # node bin/agent-kb.js
-npm run watch # node bin/agent-kb.js --watch
-npm run mcp # node bin/agent-kb.js --mcp
+npm run start # node bin/cli.js --ui
+npm run generate # node bin/cli.js
+npm run watch # node bin/cli.js --watch
+npm run mcp # node bin/cli.js --mcp
 npm run test # node --test
 ```
 
@@ -32,7 +32,7 @@ npm run test # node --test
 📄 README.md
 📄 SKILL.md
 📁 bin
-  📄 agent-kb.js
+  📄 cli.js
 📄 package.json
 📁 src
   📁 core
@@ -55,19 +55,6 @@ npm run test # node --test
   📄 http.test.js
   📄 mcp.test.js
   📄 scanner.test.js
-📁 test_project
-  📁 .agent-kb
-    📁 architecture
-    📁 debug
-    📁 features
-    📁 tasks
-  📄 PROJECT_KB.md
-  📄 package.json
-  📁 src
-    📄 agent-router.ts
-    📄 index.ts
-    📄 memory-engine.ts
-    📄 quantum-scheduler.ts
 ```
 
 ## 5. Key Entry Points & Signatures
@@ -130,10 +117,6 @@ function filterKbTree(query) {
 async function loadDoc(relPath) {
 function loadMainIndex() {
 function resize() {
-```
-### `test_project/src/agent-router.ts`
-```ts
-class AgentRouter {
 ```
 
 ## 6. Agent Navigation Rules

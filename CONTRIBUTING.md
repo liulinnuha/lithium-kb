@@ -11,7 +11,7 @@ The codebase is strictly structured for modularity and maintainability:
 ```text
 lithium-kb/
 ├── bin/
-│   └── agent-kb.js          # CLI executable runner
+│   └── cli.js               # CLI executable runner
 ├── src/
 │   ├── core/
 │   │   ├── constants.js     # Default ignore paths, categories, limits

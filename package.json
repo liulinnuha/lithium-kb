@@ -11,14 +11,21 @@
     "./mcp": "./src/mcp/server.js"
   },
   "bin": {
-    "lithium-kb": "./bin/agent-kb.js",
-    "agent-kb": "./bin/agent-kb.js"
+    "lithium-kb": "./bin/cli.js",
+    "agent-kb": "./bin/cli.js"
   },
+  "files": [
+    "bin",
+    "src",
+    "SKILL.md",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "start": "node bin/agent-kb.js --ui",
-    "generate": "node bin/agent-kb.js",
-    "watch": "node bin/agent-kb.js --watch",
-    "mcp": "node bin/agent-kb.js --mcp",
+    "start": "node bin/cli.js --ui",
+    "generate": "node bin/cli.js",
+    "watch": "node bin/cli.js --watch",
+    "mcp": "node bin/cli.js --mcp",
     "test": "node --test"
   },
   "keywords": [

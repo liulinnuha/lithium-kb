@@ -1,5 +1,0 @@
-# Quantum Nexus Agent Rules
-1. Never block the event loop with synchronous heavy vector math.
-2. All new task schedulers must implement the AgentTask interface.
-3. Write test cases in vitest for all new router algorithms.
-4. Record architectural changes into .agent-kb/architecture/.

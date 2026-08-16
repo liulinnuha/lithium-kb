@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
-const cliPath = path.join(projectRoot, 'bin', 'agent-kb.js');
+const cliPath = path.join(projectRoot, 'bin', 'cli.js');
 
 test('mcp: handles JSON-RPC 2.0 initialize, tools/list, and tools/call', async () => {
   const proc = spawn(process.execPath, [cliPath, '--mcp'], {
