@@ -1,9 +1,10 @@
 # ⚡ lithium-kb: Structured Agent Knowledge Base & Neural Graph
 
+[![GitHub](https://img.shields.io/badge/GitHub-liulinnuha%2Flithium--kb-181717.svg?logo=github)](https://github.com/liulinnuha/lithium-kb)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-blue.svg)](package.json)
 [![MCP Compatible](https://img.shields.io/badge/MCP-JSON--RPC%202.0-purple.svg)](https://modelcontextprotocol.io)
-[![License](https://img.shields.io/badge/license-MIT-informational.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A high-performance structured project knowledge base generator, neural network memory visualizer, and Model Context Protocol (MCP) server for AI coding agents (**Pi**, **Claude**, **Codex**, **Cursor**, **Windsurf**).
 

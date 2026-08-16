@@ -96,6 +96,7 @@ To support export symbol extraction for new languages (e.g. C#, Swift, Elixir):
    - `feat: add Elixir symbol parsing`
    - `fix: handle symlink recursion in scanTree`
    - `docs: update MCP setup guide`
+5. **Submit PR**: Open a pull request at [github.com/liulinnuha/lithium-kb/pulls](https://github.com/liulinnuha/lithium-kb/pulls). For questions or bug reports, open an issue at [github.com/liulinnuha/lithium-kb/issues](https://github.com/liulinnuha/lithium-kb/issues).
 
 ---
 

@@ -1,9 +1,9 @@
 # Project Knowledge Base: lithium-kb
 
-> Generated on 2026-08-16 | Branch: `N/A` | Stack: **Node.js / JavaScript / TypeScript**
+> Generated on 2026-08-16 | Branch: `master` | Stack: **Node.js / JavaScript / TypeScript**
 
 ## 1. Overview
-- **Description:** Fast markdown knowledge base generator and agent skill with interactive Neural Network Graph for token-efficient coding agents
+- **Description:** Fast, in-memory structured markdown knowledge base (.agent-kb/) with 2D neural graph visualization, live SSE activity stream, and MCP stdio integration.
 - **Root:** `lithium-kb`
 - **Stack:** Node.js / JavaScript / TypeScript
 - **Structured Knowledge Base:** `.agent-kb/`
@@ -19,13 +19,11 @@
 
 ## 3. Common Commands
 ```sh
+npm run start # node bin/agent-kb.js --ui
+npm run generate # node bin/agent-kb.js
+npm run watch # node bin/agent-kb.js --watch
+npm run mcp # node bin/agent-kb.js --mcp
 npm run test # node --test
-npm run test:watch # node --test --watch
-npm run start # node ./bin/agent-kb.js --ui
-npm run generate # node ./bin/agent-kb.js
-npm run ui # node ./bin/agent-kb.js --ui
-npm run watch # node ./bin/agent-kb.js --watch
-npm run mcp # node ./bin/agent-kb.js --mcp
 ```
 
 ## 4. Directory Map
@@ -57,6 +55,7 @@ npm run mcp # node ./bin/agent-kb.js --mcp
 📁 test
   📄 generator.test.js
   📄 http.test.js
+  📄 mcp.test.js
   📄 scanner.test.js
 📁 test_project
   📁 .agent-kb
@@ -66,7 +65,6 @@ npm run mcp # node ./bin/agent-kb.js --mcp
     📁 tasks
   📄 PROJECT_KB.md
   📄 package.json
-  📄 server.log
   📁 src
     📄 agent-router.ts
     📄 index.ts
