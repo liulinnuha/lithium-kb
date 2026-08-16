@@ -101,4 +101,4 @@ Register `npx lithium-kb --mcp` as an MCP stdio server.
 ---
 
 ## 📄 License
-MIT © liulinnuha
+MIT © [Moch Ulin Nuha](https://github.com/liulinnuha)
