@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>lithium-kb — Neural Knowledge Network</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <button type="button" class="btn-icon sidebar-toggle" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Toggle Sidebar (Ctrl+B)" aria-label="Toggle Sidebar">
+        <span class="toggle-icon">☰</span>
+      </button>
+      <span class="logo-icon" aria-hidden="true">⚡</span>
+      <div class="brand-text">
+        <span class="brand-name">lithium-kb</span>
+        <span class="brand-tagline">Neural Knowledge Network</span>
+      </div>
+      <span class="badge" id="headerBadge">Loading…</span>
+    </div>
+    <div class="actions">
+      <div class="token-chip" id="tokenChip" title="Cumulative tokens saved across active agent sessions">
+        <span class="token-pulse" aria-hidden="true">⚡</span>
+        <span id="tokensSavedVal">0</span> tokens saved
+      </div>
+      <button type="button" class="neural" onclick="triggerSimulatedPulse()" title="Simulate agent memory access (S)">
+        <span>⚡</span> Simulate Access
+      </button>
+      <button type="button" class="primary" onclick="regenerateKB()" id="btn-regen" title="Re-scan codebase (R)">
+        <span>🔄</span> Re-scan
+      </button>
+      <button type="button" class="btn-icon" onclick="toggleHelpModal()" title="Keyboard Shortcuts (?)" aria-label="Keyboard Shortcuts">
+        <span>⌨️</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="main-layout">
+    <aside id="mainSidebar" aria-label="Knowledge Base Explorer">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Structured Memory (.agent-kb/)</h3>
+          <span class="doc-count-badge" id="docCountBadge">0 docs</span>
+        </div>
+        <div class="search-box">
+          <input
+            type="text"
+            id="kbSearchInput"
+            aria-label="Search memory documents"
+            placeholder="🔍 Filter memory docs (/)…"
+            autocomplete="off"
+            spellcheck="false"
+            oninput="filterKbTree(this.value)"
+          />
+        </div>
+        <div id="kbTreeContainer" role="navigation" aria-label="Documents tree"></div>
+      </div>
+
+      <div class="panel feed-panel">
+        <div class="panel-header">
+          <h3>⚡ Agent Memory Hits</h3>
+          <div class="feed-header-actions">
+            <span class="live-tag" aria-live="polite">● LIVE</span>
+            <button type="button" class="btn-text-sm" onclick="clearEventFeed()" title="Clear activity stream">Clear</button>
+          </div>
+        </div>
+        <div class="event-feed" id="eventFeed" role="log" aria-label="Agent memory stream"></div>
+      </div>
+    </aside>
+
+    <main class="content-area">
+      <div class="nav-tabs" role="tablist" aria-label="View tabs">
+        <button
+          type="button"
+          role="tab"
+          id="tab-btn-graph"
+          aria-selected="true"
+          aria-controls="view-graph"
+          class="nav-tab active"
+          onclick="switchView('graph', this)"
+        >🧠 Neural Network Graph</button>
+        <button
+          type="button"
+          role="tab"
+          id="tab-btn-doc"
+          aria-selected="false"
+          aria-controls="view-doc"
+          class="nav-tab"
+          onclick="switchView('doc', this)"
+        >📄 Rendered View</button>
+        <button
+          type="button"
+          role="tab"
+          id="tab-btn-raw"
+          aria-selected="false"
+          aria-controls="view-raw"
+          class="nav-tab"
+          onclick="switchView('raw', this)"
+        >📝 Raw Markdown</button>
+      </div>
+
+      <!-- Graph View -->
+      <section class="tab-view active" id="view-graph" role="tabpanel" aria-labelledby="tab-btn-graph">
+        <div id="graph-container">
+          <canvas id="networkCanvas" aria-label="Interactive neural knowledge graph" role="img">
+            Interactive canvas displaying nodes and connections of the project knowledge base.
+          </canvas>
+          
+          <div class="graph-hud" aria-hidden="true">
+            <div class="hud-title">Active Neural Memory Map</div>
+            <div class="hud-sub">Scroll to zoom • Drag to pan • Click node to open • Live SSE pulses</div>
+          </div>
+
+          <!-- Tooltip Popup on Hover -->
+          <div class="node-tooltip" id="nodeTooltip">
+            <div class="tooltip-header" id="ttHeader">Node Title</div>
+            <div class="tooltip-body" id="ttBody">Node Details</div>
+            <div class="tooltip-footer" id="ttFooter">Click to view document</div>
+          </div>
+
+          <!-- Floating Graph Controls -->
+          <div class="graph-controls">
+            <button type="button" class="btn-hud" onclick="zoomIn()" title="Zoom In (+)" aria-label="Zoom In">➕</button>
+            <button type="button" class="btn-hud" onclick="zoomOut()" title="Zoom Out (-)" aria-label="Zoom Out">➖</button>
+            <button type="button" class="btn-hud" onclick="resetGraph()" title="Center Graph (0)">🎯 Center</button>
+            <button type="button" class="btn-hud neural-btn-sm" onclick="triggerSimulatedPulse()" title="Fire Neural Impulses (S)">✨ Fire Impulses</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Rendered Document View -->
+      <section class="tab-view" id="view-doc" role="tabpanel" aria-labelledby="tab-btn-doc">
+        <div id="doc-view">
+          <div class="doc-card">
+            <div class="doc-toolbar">
+              <div class="doc-breadcrumbs" id="docBreadcrumbs">
+                <span class="crumb root">.agent-kb</span>
+                <span class="crumb-sep">/</span>
+                <span class="crumb active" id="activeDocTitle">PROJECT_KB.md</span>
+              </div>
+              <div class="doc-meta-actions">
+                <span class="token-estimate" id="docTokenEstimate">⚡ ~0 tokens</span>
+                <button type="button" class="btn-sm" onclick="copyMarkdown()">📋 Copy Content</button>
+              </div>
+            </div>
+            
+            <div class="toc-container" id="docToc" style="display: none;">
+              <span class="toc-title">Outline:</span>
+              <div class="toc-pills" id="tocPills"></div>
+            </div>
+
+            <div id="markdown-render"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Raw Markdown View -->
+      <section class="tab-view" id="view-raw" role="tabpanel" aria-labelledby="tab-btn-raw">
+        <div id="raw-view">
+          <div class="raw-header">
+            <span class="raw-title">Source Markdown Editor / Viewer</span>
+            <button type="button" class="btn-sm" onclick="copyMarkdown()">📋 Copy All</button>
+          </div>
+          <textarea id="raw-text" aria-label="Raw Markdown source" readonly spellcheck="false"></textarea>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Keyboard Shortcuts Modal -->
+  <div class="modal-overlay" id="helpModal" onclick="if(event.target === this) toggleHelpModal()">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>⌨️ Keyboard Shortcuts</h3>
+        <button type="button" class="btn-close" onclick="toggleHelpModal()" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="shortcut-row"><kbd>/</kbd> <span>Focus memory docs search</span></div>
+        <div class="shortcut-row"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <span>Switch views (Graph / Rendered / Raw)</span></div>
+        <div class="shortcut-row"><kbd>+</kbd> <kbd>-</kbd> <span>Zoom in / out on Neural Graph</span></div>
+        <div class="shortcut-row"><kbd>0</kbd> <span>Reset & center graph</span></div>
+        <div class="shortcut-row"><kbd>S</kbd> <span>Simulate agent memory access pulse</span></div>
+        <div class="shortcut-row"><kbd>R</kbd> <span>Re-scan codebase & regenerate memory</span></div>
+        <div class="shortcut-row"><kbd>C</kbd> <span>Copy current document markdown</span></div>
+        <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>B</kbd> <span>Toggle sidebar panel</span></div>
+        <div class="shortcut-row"><kbd>?</kbd> / <kbd>Esc</kbd> <span>Toggle shortcuts modal / close</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- Injected Initial Data -->
+  <script>
+    /* __INITIAL_DATA_PLACEHOLDER__ */
+    if (window.__INITIAL_DATA__) {
+      document.getElementById('headerBadge').innerText = window.__INITIAL_DATA__.projectType || 'Project';
+      document.getElementById('tokensSavedVal').innerText = (window.__INITIAL_DATA__.cumulativeTokensSaved || 4250).toLocaleString();
+    }
+  </script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
