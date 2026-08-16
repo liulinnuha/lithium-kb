@@ -32,6 +32,16 @@ function writeJsonSafe(filePath, data) {
 }
 
 /**
+ * Checks if a given directory is the user's home directory or filesystem root.
+ */
+export function isHomeOrRootDir(dir) {
+  const resolved = path.resolve(dir);
+  const home = path.resolve(os.homedir());
+  const root = path.parse(resolved).root;
+  return resolved === home || resolved === root;
+}
+
+/**
  * Returns platform-specific global configuration paths for various editors and agents.
  */
 function getGlobalAgentConfigs() {
@@ -59,9 +69,7 @@ function getGlobalAgentConfigs() {
 
   // 2. Windsurf (Codeium)
   let windsurfConfigPath;
-  if (platform === 'darwin' || platform === 'linux') {
-    windsurfConfigPath = path.join(home, '.codeium', 'windsurf', 'mcp_config.json');
-  } else if (platform === 'win32') {
+  if (platform === 'darwin' || platform === 'linux' || platform === 'win32') {
     windsurfConfigPath = path.join(home, '.codeium', 'windsurf', 'mcp_config.json');
   }
   if (windsurfConfigPath) {
@@ -190,45 +198,50 @@ function injectMcpConfig(target) {
  * Runs one-click agent setup across project workspace & detected editors.
  */
 export function initializeProject(cwd = process.cwd()) {
+  const isHome = isHomeOrRootDir(cwd);
+
   const results = {
+    isHomeDir: isHome,
     kbInitialized: false,
     agentRulesCreated: false,
     configuredTargets: [],
     errors: []
   };
 
-  // 1. Initialize .agent-kb/ and PROJECT_KB.md
-  try {
-    ensureKnowledgeBaseStructure(cwd);
-    generateMarkdownKB(cwd);
-    results.kbInitialized = true;
-  } catch (err) {
-    results.errors.push(`Failed to initialize knowledge structure: ${err.message}`);
-  }
+  // If run in HOME or ROOT, skip creating project knowledge files
+  if (!isHome) {
+    // 1. Initialize .agent-kb/ and PROJECT_KB.md
+    try {
+      ensureKnowledgeBaseStructure(cwd);
+      generateMarkdownKB(cwd);
+      results.kbInitialized = true;
+    } catch (err) {
+      results.errors.push(`Failed to initialize knowledge structure: ${err.message}`);
+    }
 
-  // 2. Create .agentrules if not present
-  try {
-    const agentRulesPath = path.join(cwd, '.agentrules');
-    if (!fs.existsSync(agentRulesPath)) {
-      const defaultRules = `# Agent Navigation Directives
+    // 2. Create .agentrules if not present
+    try {
+      const agentRulesPath = path.join(cwd, '.agentrules');
+      if (!fs.existsSync(agentRulesPath)) {
+        const defaultRules = `# Agent Navigation Directives
 1. Zero Blind Crawling: Consult .agent-kb/ or PROJECT_KB.md before crawling files.
 2. Record Learnings: Store bug fixes to .agent-kb/debug/ and tasks to .agent-kb/tasks/.
 3. Deterministic Context: Use lithium-kb MCP tools for fast retrieval.
 `;
-      fs.writeFileSync(agentRulesPath, defaultRules, 'utf8');
-      results.agentRulesCreated = true;
+        fs.writeFileSync(agentRulesPath, defaultRules, 'utf8');
+        results.agentRulesCreated = true;
+      }
+    } catch (err) {
+      results.errors.push(`Failed to write .agentrules: ${err.message}`);
     }
-  } catch (err) {
-    results.errors.push(`Failed to write .agentrules: ${err.message}`);
-  }
 
-  // 3. Configure Project-Level MCP (Cursor, Workspace MCP)
-  const projectConfigs = getProjectAgentConfigs(cwd);
-  for (const cfg of projectConfigs) {
-    // Always configure Cursor project config by default
-    if (cfg.name === 'Cursor') {
-      if (injectMcpConfig(cfg)) {
-        results.configuredTargets.push(cfg);
+    // 3. Configure Project-Level MCP (Cursor)
+    const projectConfigs = getProjectAgentConfigs(cwd);
+    for (const cfg of projectConfigs) {
+      if (cfg.name === 'Cursor') {
+        if (injectMcpConfig(cfg)) {
+          results.configuredTargets.push(cfg);
+        }
       }
     }
   }
@@ -237,7 +250,6 @@ export function initializeProject(cwd = process.cwd()) {
   const globalConfigs = getGlobalAgentConfigs();
   for (const cfg of globalConfigs) {
     const parentDir = path.dirname(cfg.path);
-    // If the editor's app directory exists, configure it
     if (fs.existsSync(parentDir) || fs.existsSync(cfg.path)) {
       if (injectMcpConfig(cfg)) {
         results.configuredTargets.push(cfg);

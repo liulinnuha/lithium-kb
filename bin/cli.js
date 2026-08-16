@@ -37,11 +37,15 @@ if (isInitMode) {
   console.log(`⚡ [lithium-kb] Auto-configuring project & AI agent environments...\n`);
   const res = initializeProject(cwd);
 
-  if (res.kbInitialized) {
-    console.log(`✔ Initialized structured knowledge base (.agent-kb/ & PROJECT_KB.md)`);
-  }
-  if (res.agentRulesCreated) {
-    console.log(`✔ Created .agentrules (Agent navigation directives)`);
+  if (res.isHomeDir) {
+    console.log(`ℹ Detected home/root directory (~): Skipped local knowledge base creation.`);
+  } else {
+    if (res.kbInitialized) {
+      console.log(`✔ Initialized structured knowledge base (.agent-kb/ & PROJECT_KB.md)`);
+    }
+    if (res.agentRulesCreated) {
+      console.log(`✔ Created .agentrules (Agent navigation directives)`);
+    }
   }
 
   if (res.configuredTargets.length > 0) {
@@ -49,7 +53,7 @@ if (isInitMode) {
     for (const target of res.configuredTargets) {
       console.log(`  • ${target.name}: ${target.path}`);
     }
-  } else {
+  } else if (!res.isHomeDir) {
     console.log(`\n✔ Configured project-level MCP: .cursor/mcp.json`);
   }
 
