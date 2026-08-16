@@ -59,9 +59,10 @@ export function startServer(cwd, port = 3030) {
     } else if (pathname === '/api/doc' && req.method === 'GET') {
       const docPath = url.searchParams.get('path');
       if (docPath) {
-        const fullPath = path.resolve(cwd, docPath);
-        if (fs.existsSync(fullPath)) {
-          const content = fs.readFileSync(fullPath, 'utf8');
+        const resolvedPath = path.resolve(cwd, docPath);
+        // Security: Prevent path traversal outside project root
+        if (resolvedPath.startsWith(path.resolve(cwd)) && fs.existsSync(resolvedPath)) {
+          const content = fs.readFileSync(resolvedPath, 'utf8');
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ path: docPath, content }));
           return;

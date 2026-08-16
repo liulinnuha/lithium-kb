@@ -100,14 +100,16 @@ export function startMcpServer(cwd) {
             }
           });
         } else if (toolName === 'read_knowledge_doc') {
-          const docPath = path.join(cwd, KB_DIR_NAME, args.category, args.filename);
+          const safeFilename = path.basename(args.filename || '');
+          const safeCategory = ['architecture', 'debug', 'tasks', 'features'].includes(args.category) ? args.category : 'architecture';
+          const docPath = path.join(cwd, KB_DIR_NAME, safeCategory, safeFilename);
           if (fs.existsSync(docPath)) {
             const content = fs.readFileSync(docPath, 'utf8');
             globalSseBroker.broadcast({
               id: Date.now(),
-              nodeId: `doc-${args.category.slice(0, 4)}-${args.filename}`,
-              label: `${args.category}/${args.filename}`,
-              query: `Read ${args.category}/${args.filename}`,
+              nodeId: `doc-${safeCategory.slice(0, 4)}-${safeFilename}`,
+              label: `${safeCategory}/${safeFilename}`,
+              query: `Read ${safeCategory}/${safeFilename}`,
               agent: 'MCP Coding Agent',
               time: new Date().toLocaleTimeString(),
               tokensSaved: 1400
@@ -121,20 +123,22 @@ export function startMcpServer(cwd) {
             sendJsonRpc({
               jsonrpc: '2.0',
               id,
-              error: { code: -32602, message: `Document not found: ${args.category}/${args.filename}` }
+              error: { code: -32602, message: `Document not found: ${safeCategory}/${safeFilename}` }
             });
           }
         } else if (toolName === 'write_knowledge_doc') {
-          const targetDir = path.join(cwd, KB_DIR_NAME, args.category);
+          const safeFilename = path.basename(args.filename || '');
+          const safeCategory = ['architecture', 'debug', 'tasks', 'features'].includes(args.category) ? args.category : 'tasks';
+          const targetDir = path.join(cwd, KB_DIR_NAME, safeCategory);
           if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
-          const docPath = path.join(targetDir, args.filename);
-          fs.writeFileSync(docPath, args.content, 'utf8');
+          const docPath = path.join(targetDir, safeFilename);
+          fs.writeFileSync(docPath, args.content || '', 'utf8');
           generateMarkdownKB(cwd);
           globalSseBroker.broadcast({
             id: Date.now(),
-            nodeId: `cat-${args.category}`,
-            label: `${args.category}/${args.filename}`,
-            query: `Saved ${args.category}/${args.filename}`,
+            nodeId: `cat-${safeCategory}`,
+            label: `${safeCategory}/${safeFilename}`,
+            query: `Saved ${safeCategory}/${safeFilename}`,
             agent: 'MCP Coding Agent',
             time: new Date().toLocaleTimeString(),
             tokensSaved: 950
@@ -142,7 +146,7 @@ export function startMcpServer(cwd) {
           sendJsonRpc({
             jsonrpc: '2.0',
             id,
-            result: { content: [{ type: 'text', text: `Successfully saved ${args.category}/${args.filename}` }] }
+            result: { content: [{ type: 'text', text: `Successfully saved ${safeCategory}/${safeFilename}` }] }
           });
         } else if (toolName === 'query_symbol_map') {
           const items = scanTree(cwd, cwd);
