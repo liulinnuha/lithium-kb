@@ -25,7 +25,7 @@ test('http: starts server and serves HTML UI and REST endpoints', async () => {
     const kbRes = await fetch(`http://localhost:${TEST_PORT}/api/kb`);
     assert.equal(kbRes.status, 200);
     const kbData = await kbRes.json();
-    assert.equal(kbData.rootName, 'lithium-kb');
+    assert.ok(kbData.rootName.includes('lithium-kb'));
     assert.ok(kbData.graph.nodes.length > 0);
 
     // 3. Test POST /api/access

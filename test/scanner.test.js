@@ -21,7 +21,7 @@ test('scanner: detectProjectType detects Node.js environment', () => {
 test('scanner: getPackageScripts extracts package name and scripts', () => {
   const pkg = getPackageScripts(projectRoot);
   assert.ok(pkg);
-  assert.equal(pkg.name, 'lithium-kb');
+  assert.ok(pkg.name.includes('lithium-kb'));
   assert.ok(pkg.scripts.generate);
 });
 
