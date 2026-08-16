@@ -38,6 +38,9 @@ your-project/
 ## Commands
 
 ```bash
+# Auto-configure MCP for Cursor, Claude, Windsurf, Zed, and VS Code
+npx @liulinnuha/lithium-kb init
+
 # Generate / sync structured knowledge base
 npx @liulinnuha/lithium-kb
 

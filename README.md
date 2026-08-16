@@ -43,10 +43,19 @@ your-project/
 
 ---
 
-## 📦 Installation & Usage
+## 📦 Installation & Quickstart
 
-### Method 1: Instant Run (Zero Install — Recommended)
-Run directly inside any project without installing anything:
+### 🚀 1-Command Setup (Auto-Configure All Agents & Editors)
+Run this inside any project repository to initialize the knowledge structure and automatically configure MCP for **Cursor**, **Claude Desktop**, **Windsurf**, **Zed**, and **VS Code (Cline / Roo Code)**:
+
+```bash
+npx @liulinnuha/lithium-kb init
+```
+
+---
+
+### Additional Commands
+
 ```bash
 # Generate / Sync knowledge base (.agent-kb/ and PROJECT_KB.md)
 npx @liulinnuha/lithium-kb
@@ -57,7 +66,7 @@ npx @liulinnuha/lithium-kb --ui
 # Auto-watch for file changes and sync live
 npx @liulinnuha/lithium-kb --watch
 
-# Launch MCP stdio server for AI coding agents
+# Launch MCP stdio server manually
 npx @liulinnuha/lithium-kb --mcp
 ```
 
