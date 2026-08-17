@@ -274,34 +274,35 @@ export function uninstallProject(cwd = process.cwd(), cleanFiles = false) {
         results.cleanedTargets.push(cfg);
       }
     }
+  }
 
-    if (cleanFiles) {
-      const kbDir = path.join(cwd, '.agent-kb');
-      const projectKb = path.join(cwd, 'PROJECT_KB.md');
-      const agentRules = path.join(cwd, '.agentrules');
+  // 2. Clean files (handles both project directories and accidental files in $HOME)
+  if (cleanFiles) {
+    const kbDir = path.join(cwd, '.agent-kb');
+    const projectKb = path.join(cwd, 'PROJECT_KB.md');
+    const agentRules = path.join(cwd, '.agentrules');
 
-      if (fs.existsSync(kbDir)) {
-        try {
-          fs.rmSync(kbDir, { recursive: true, force: true });
-          results.removedFiles.push(kbDir);
-        } catch {}
-      }
-      if (fs.existsSync(projectKb)) {
-        try {
-          fs.unlinkSync(projectKb);
-          results.removedFiles.push(projectKb);
-        } catch {}
-      }
-      if (fs.existsSync(agentRules)) {
-        try {
-          fs.unlinkSync(agentRules);
-          results.removedFiles.push(agentRules);
-        } catch {}
-      }
+    if (fs.existsSync(kbDir)) {
+      try {
+        fs.rmSync(kbDir, { recursive: true, force: true });
+        results.removedFiles.push(kbDir);
+      } catch {}
+    }
+    if (fs.existsSync(projectKb)) {
+      try {
+        fs.unlinkSync(projectKb);
+        results.removedFiles.push(projectKb);
+      } catch {}
+    }
+    if (fs.existsSync(agentRules)) {
+      try {
+        fs.unlinkSync(agentRules);
+        results.removedFiles.push(agentRules);
+      } catch {}
     }
   }
 
-  // 2. Remove global editor configurations
+  // 3. Remove global editor configurations
   const globalConfigs = getGlobalAgentConfigs();
   for (const cfg of globalConfigs) {
     if (removeMcpConfig(cfg)) {
@@ -309,7 +310,7 @@ export function uninstallProject(cwd = process.cwd(), cleanFiles = false) {
     }
   }
 
-  // 3. Remove global agent skills
+  // 4. Remove global agent skills
   results.uninstalledSkills = uninstallGlobalSkills();
 
   return results;
