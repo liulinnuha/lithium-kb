@@ -5,7 +5,8 @@ export const DEFAULT_IGNORED_DIRS = [
 
 export const MAX_DEPTH = 4;
 export const MAX_SAMPLE_FILES = 60;
-export const KB_DIR_NAME = '.agent-kb';
+export const KB_DIR_NAME = '.lithium-kb';
+export const LEGACY_KB_DIR_NAME = '.agent-kb';
 
 export const KB_CATEGORIES = [
   'architecture',

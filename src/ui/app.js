@@ -449,7 +449,7 @@ export function renderDocs() {
     const parts = currentDocName.split(/[\/\\]/);
     activeDocTitle.innerText = parts[parts.length - 1];
     if (breadcrumbsRoot) {
-      breadcrumbsRoot.innerText = parts.length > 1 ? parts.slice(0, -1).join('/') : '.agent-kb';
+      breadcrumbsRoot.innerText = parts.length > 1 ? parts.slice(0, -1).join('/') : '.lithium-kb';
     }
   }
 

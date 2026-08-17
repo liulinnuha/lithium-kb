@@ -14,11 +14,11 @@ A high-performance structured project knowledge base generator, neural network m
 
 ## 📁 Structured Knowledge Hierarchy
 
-Whenever `lithium-kb` is run, it organizes project memory into clean, modular knowledge categories without clunky numeric prefixes:
+Whenever `lithium-kb` is run, it organizes project memory into clean, modular knowledge categories:
 
 ```text
 your-project/
-├── .agent-kb/
+├── .lithium-kb/
 │   ├── architecture/
 │   │   └── overview.md             # Topology, entry points, service boundaries
 │   ├── debug/
@@ -39,7 +39,7 @@ your-project/
 
 ## ⚡ Why Structured Knowledge Matters
 
-1. **Surgical Token Efficiency**: When an agent works on a bug or task, it reads *only* `.agent-kb/tasks/<name>.md` or `.agent-kb/debug/<name>.md` instead of blindly traversing thousands of codebase lines.
+1. **Surgical Token Efficiency**: When an agent works on a bug or task, it reads *only* `.lithium-kb/tasks/<name>.md` or `.lithium-kb/debug/<name>.md` instead of blindly traversing thousands of codebase lines.
 2. **Deterministic Context**: Agents don't lose track of multi-step plans across sessions.
 3. **Interactive Neural Visualizer**:
    - **File Explorer Sidebar**: Collapsible category trees with directory rails, item count badges, and expand/collapse quick actions.
@@ -62,7 +62,7 @@ npx @liulinnuha/lithium-kb init
 ### 🛠️ CLI Commands
 
 ```bash
-# Generate / Sync knowledge base (.agent-kb/ and PROJECT_KB.md)
+# Generate / Sync knowledge base (.lithium-kb/ and PROJECT_KB.md)
 npx @liulinnuha/lithium-kb
 
 # Open Neural Graph Web UI (port 3030)
@@ -77,7 +77,7 @@ npx @liulinnuha/lithium-kb --mcp
 # Clean MCP configurations & legacy references from all IDEs
 npx @liulinnuha/lithium-kb uninstall
 
-# Completely purge MCP configurations and local .agent-kb/ files
+# Completely purge MCP configurations and local .lithium-kb/ files
 npx @liulinnuha/lithium-kb uninstall --purge
 ```
 
@@ -114,7 +114,7 @@ Add this to your Claude Desktop config (`claude_desktop_config.json`) or Cursor 
 | Tool | Purpose |
 | :--- | :--- |
 | `get_project_memory` | Return compact architecture & symbol index (< 2KB). |
-| `read_knowledge_doc` | Read targeted doc from `.agent-kb/` (`category`, `filename`). |
+| `read_knowledge_doc` | Read targeted doc from `.lithium-kb/` (`category`, `filename`). |
 | `write_knowledge_doc` | Persist new task note, debug postmortem, or feature spec. |
 | `query_symbol_map` | Search exported functions, classes, and types across the repo. |
 

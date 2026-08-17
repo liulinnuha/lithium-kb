@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { ensureKnowledgeBaseStructure, generateMarkdownKB } from './generator.js';
 
 const MCP_COMMAND = 'npx';
@@ -234,6 +235,40 @@ function removeMcpConfig(target) {
 }
 
 /**
+ * Ensures global Pi / Claude agent skill is registered in ~/.agents/skills/lithium-kb/SKILL.md
+ */
+export function ensureGlobalAgentSkill() {
+  try {
+    const home = os.homedir();
+    const globalSkillDir = path.join(home, '.agents', 'skills', 'lithium-kb');
+    if (!fs.existsSync(globalSkillDir)) {
+      fs.mkdirSync(globalSkillDir, { recursive: true });
+    }
+
+    const localSkillPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../SKILL.md');
+    const skillContent = fs.existsSync(localSkillPath)
+      ? fs.readFileSync(localSkillPath, 'utf8')
+      : `---
+name: lithium-kb
+description: Generates, maintains, and visualizes a structured Markdown knowledge base (.agent-kb/{architecture,debug,tasks,features}) with an interactive Neural Network graph, auto-watch mode, custom agent directives (.agentrules), and MCP server integration for Pi, Claude, Codex, Cursor, and other coding agents. Triggers automatically on tasks, bugs, or when the user mentions "kb", "knowledge base", "sync kb".
+---
+
+# Structured Agent Knowledge Base (lithium-kb)
+
+When assigned a task or bug fix:
+1. Consult .agent-kb/ or PROJECT_KB.md before crawling files.
+2. Record task updates in .agent-kb/tasks/<name>.md and bug resolutions in .agent-kb/debug/<name>.md.
+3. Sync global index using 'npx @liulinnuha/lithium-kb'.
+`;
+
+    fs.writeFileSync(path.join(globalSkillDir, 'SKILL.md'), skillContent, 'utf8');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Removes global Pi agent skill registrations if present.
  */
 function uninstallGlobalSkills() {
@@ -278,27 +313,39 @@ export function uninstallProject(cwd = process.cwd(), cleanFiles = false) {
 
   // 2. Clean files (handles both project directories and accidental files in $HOME)
   if (cleanFiles) {
-    const kbDir = path.join(cwd, '.agent-kb');
-    const projectKb = path.join(cwd, 'PROJECT_KB.md');
-    const agentRules = path.join(cwd, '.agentrules');
+    if (cleanFiles) {
+      const kbDir = path.join(cwd, '.lithium-kb');
+      const legacyKbDir = path.join(cwd, '.agent-kb');
+      const projectKb = path.join(cwd, 'PROJECT_KB.md');
+      const ruleFiles = ['.agentrules', '.cursorrules', 'CLAUDE.md', '.windsurfrules'];
 
-    if (fs.existsSync(kbDir)) {
-      try {
-        fs.rmSync(kbDir, { recursive: true, force: true });
-        results.removedFiles.push(kbDir);
-      } catch {}
-    }
-    if (fs.existsSync(projectKb)) {
-      try {
-        fs.unlinkSync(projectKb);
-        results.removedFiles.push(projectKb);
-      } catch {}
-    }
-    if (fs.existsSync(agentRules)) {
-      try {
-        fs.unlinkSync(agentRules);
-        results.removedFiles.push(agentRules);
-      } catch {}
+      if (fs.existsSync(kbDir)) {
+        try {
+          fs.rmSync(kbDir, { recursive: true, force: true });
+          results.removedFiles.push(kbDir);
+        } catch {}
+      }
+      if (fs.existsSync(legacyKbDir)) {
+        try {
+          fs.rmSync(legacyKbDir, { recursive: true, force: true });
+          results.removedFiles.push(legacyKbDir);
+        } catch {}
+      }
+      if (fs.existsSync(projectKb)) {
+        try {
+          fs.unlinkSync(projectKb);
+          results.removedFiles.push(projectKb);
+        } catch {}
+      }
+      for (const rf of ruleFiles) {
+        const fullRf = path.join(cwd, rf);
+        if (fs.existsSync(fullRf)) {
+          try {
+            fs.unlinkSync(fullRf);
+            results.removedFiles.push(fullRf);
+          } catch {}
+        }
+      }
     }
   }
 
@@ -341,22 +388,43 @@ export function initializeProject(cwd = process.cwd()) {
       results.errors.push(`Failed to initialize knowledge structure: ${err.message}`);
     }
 
-    // 2. Create .agentrules if not present
+    // 2. Create agent rules for Pi, Cursor, Claude Code, and Windsurf
     try {
+      const defaultRules = `# Agent Navigation & Memory Directives
+1. Zero Blind Crawling: Before crawling files across the repository, read .lithium-kb/ or PROJECT_KB.md.
+2. Mandatory Task & Bug Tracking:
+   - For every task, UI refactor, or feature assigned, create/update .lithium-kb/tasks/<task-name>.md.
+   - For every resolved bug or diagnostic fix, document root cause and solution in .lithium-kb/debug/<issue-name>.md.
+3. Keep Memory Synced: Run 'npx @liulinnuha/lithium-kb' after updating .lithium-kb/ docs.
+4. Deterministic Output: Do not emit dynamic timestamps or session headers in knowledge markdown files.
+`;
+
+      // a) .agentrules (Pi Agent, standard coding agents)
       const agentRulesPath = path.join(cwd, '.agentrules');
       if (!fs.existsSync(agentRulesPath)) {
-        const defaultRules = `# Agent Navigation Directives
-1. Zero Blind Crawling: When starting, read .agent-kb/ or PROJECT_KB.md before broad codebase crawling.
-2. Auto-Generate Knowledge: If .agent-kb/ or PROJECT_KB.md is missing, run 'npx @liulinnuha/lithium-kb' or initialize it immediately.
-3. Record Learnings: Store bug fixes to .agent-kb/debug/ and task updates to .agent-kb/tasks/.
-4. Trigger Keywords: Trigger updates or scans on "kb", "knowledge base", "sync kb", "architecture", "debug note".
-5. Deterministic Context: Use lithium-kb MCP tools for targeted retrieval.
-`;
         fs.writeFileSync(agentRulesPath, defaultRules, 'utf8');
         results.agentRulesCreated = true;
       }
+
+      // b) .cursorrules (Cursor IDE)
+      const cursorRulesPath = path.join(cwd, '.cursorrules');
+      if (!fs.existsSync(cursorRulesPath)) {
+        fs.writeFileSync(cursorRulesPath, defaultRules, 'utf8');
+      }
+
+      // c) CLAUDE.md (Claude Code CLI)
+      const claudeRulesPath = path.join(cwd, 'CLAUDE.md');
+      if (!fs.existsSync(claudeRulesPath)) {
+        fs.writeFileSync(claudeRulesPath, defaultRules, 'utf8');
+      }
+
+      // d) .windsurfrules (Windsurf / Cascade)
+      const windsurfRulesPath = path.join(cwd, '.windsurfrules');
+      if (!fs.existsSync(windsurfRulesPath)) {
+        fs.writeFileSync(windsurfRulesPath, defaultRules, 'utf8');
+      }
     } catch (err) {
-      results.errors.push(`Failed to write .agentrules: ${err.message}`);
+      results.errors.push(`Failed to write agent rules: ${err.message}`);
     }
 
     // 3. Configure Project-Level MCP (Cursor)
@@ -379,6 +447,16 @@ export function initializeProject(cwd = process.cwd()) {
         results.configuredTargets.push(cfg);
       }
     }
+  }
+
+  // 5. Ensure global Pi / Claude agent skill is registered
+  if (ensureGlobalAgentSkill()) {
+    results.configuredTargets.push({
+      name: 'Pi Agent Skill (~/.agents/skills/lithium-kb)',
+      type: 'skill',
+      path: path.join(os.homedir(), '.agents', 'skills', 'lithium-kb', 'SKILL.md'),
+      global: true
+    });
   }
 
   return results;

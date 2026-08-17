@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "lithium-kb": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@liulinnuha/lithium-kb",
+        "--mcp"
+      ]
+    }
+  }
+}

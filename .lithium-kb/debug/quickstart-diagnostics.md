@@ -1,0 +1,4 @@
+# Quickstart Diagnostics
+
+- **Issue:** Token bloat during multi-file repository exploration.
+- **Resolution:** Route agents to in-memory .agent-kb/ directory map.

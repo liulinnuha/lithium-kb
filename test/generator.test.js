@@ -13,7 +13,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 
-test('generator: ensureKnowledgeBaseStructure initializes .agent-kb subdirectories', () => {
+test('generator: ensureKnowledgeBaseStructure initializes .lithium-kb subdirectories', () => {
   const kbRoot = ensureKnowledgeBaseStructure(projectRoot);
   assert.ok(fs.existsSync(path.join(kbRoot, 'architecture')));
   assert.ok(fs.existsSync(path.join(kbRoot, 'tasks')));

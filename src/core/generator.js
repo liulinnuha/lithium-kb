@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { KB_DIR_NAME, KB_CATEGORIES } from './constants.js';
+import { KB_DIR_NAME, LEGACY_KB_DIR_NAME, KB_CATEGORIES } from './constants.js';
 import {
   detectProjectType,
   getPackageScripts,
@@ -10,12 +10,26 @@ import {
 } from './scanner.js';
 
 /**
- * Ensures standard knowledge folders (.agent-kb/{architecture,debug,tasks,features}) exist.
+ * Resolves active knowledge base root directory (.lithium-kb or fallback to legacy .agent-kb).
+ * @param {string} cwd
+ * @returns {string}
+ */
+export function resolveKbDirectory(cwd) {
+  const primary = path.join(cwd, KB_DIR_NAME);
+  const legacy = path.join(cwd, LEGACY_KB_DIR_NAME);
+
+  if (fs.existsSync(primary)) return primary;
+  if (fs.existsSync(legacy)) return legacy;
+  return primary;
+}
+
+/**
+ * Ensures standard knowledge folders (.lithium-kb/{architecture,debug,tasks,features}) exist.
  * @param {string} cwd
  * @returns {string}
  */
 export function ensureKnowledgeBaseStructure(cwd) {
-  const kbRoot = path.join(cwd, KB_DIR_NAME);
+  const kbRoot = resolveKbDirectory(cwd);
 
   for (const cat of KB_CATEGORIES) {
     const dir = path.join(kbRoot, cat);
@@ -65,13 +79,12 @@ export function ensureKnowledgeBaseStructure(cwd) {
 }
 
 /**
- * Scans all structured markdown files inside .agent-kb/
+ * Scans all structured markdown files inside .lithium-kb/ (or legacy .agent-kb/)
  * @param {string} cwd
  * @returns {Record<string, Array>}
  */
 export function scanStructuredKnowledgeDocs(cwd) {
-  const kbRoot = path.join(cwd, KB_DIR_NAME);
-  if (!fs.existsSync(kbRoot)) ensureKnowledgeBaseStructure(cwd);
+  const kbRoot = resolveKbDirectory(cwd);
 
   const result = {};
   for (const cat of KB_CATEGORIES) {
@@ -155,17 +168,18 @@ export function buildNeuralGraphData(cwd) {
 /**
  * Generates the unified Markdown Knowledge Base (PROJECT_KB.md).
  * @param {string} cwd
+ * @param {boolean} [writeFiles=true]
  * @returns {object}
  */
-export function generateMarkdownKB(cwd) {
-  ensureKnowledgeBaseStructure(cwd);
+export function generateMarkdownKB(cwd, writeFiles = true) {
   const pkgInfo = getPackageScripts(cwd);
   const rootName = pkgInfo?.name || path.basename(path.resolve(cwd));
   const projectType = detectProjectType(cwd);
   const customRules = getCustomAgentRules(cwd);
+  const kbDirName = path.basename(resolveKbDirectory(cwd));
   const docs = scanStructuredKnowledgeDocs(cwd);
   const items = scanTree(cwd, cwd);
-  const files = items.filter(i => i.type === 'file' && !i.path.startsWith(KB_DIR_NAME));
+  const files = items.filter(i => i.type === 'file' && !i.path.startsWith(KB_DIR_NAME) && !i.path.startsWith(LEGACY_KB_DIR_NAME));
   const symbols = extractKeySymbols(cwd, files);
 
   let md = `# Project Knowledge Base: ${rootName}\n\n`;
@@ -175,10 +189,10 @@ export function generateMarkdownKB(cwd) {
   if (pkgInfo?.description) md += `- **Description:** ${pkgInfo.description}\n`;
   md += `- **Root:** \`${rootName}\`\n`;
   md += `- **Stack:** ${projectType}\n`;
-  md += `- **Structured Knowledge Base:** \`.agent-kb/\`\n\n`;
+  md += `- **Structured Knowledge Base:** \`${kbDirName}/\`\n\n`;
 
   // 2. Structured Knowledge Directory
-  md += `## 2. Structured Knowledge Directory (.agent-kb/)\n\n`;
+  md += `## 2. Structured Knowledge Directory (${kbDirName}/)\n\n`;
   md += `| Category | Documents | Purpose |\n| :--- | :--- | :--- |\n`;
   md += `| **architecture/** | ${(docs.architecture || []).map(d => `\`${d.filename}\``).join(', ') || 'none'} | System topology, services, APIs |\n`;
   md += `| **tasks/** | ${(docs.tasks || []).map(d => `\`${d.filename}\``).join(', ') || 'none'} | Active tasks, backlog, completed work |\n`;
@@ -197,7 +211,7 @@ export function generateMarkdownKB(cwd) {
 
   // 4. Directory Map
   md += `## 4. Directory Map\n\`\`\`text\n`;
-  const topLevel = items.filter(i => i.depth <= 2 && !i.path.startsWith(KB_DIR_NAME));
+  const topLevel = items.filter(i => i.depth <= 2 && !i.path.startsWith(KB_DIR_NAME) && !i.path.startsWith(LEGACY_KB_DIR_NAME));
   for (const item of topLevel) {
     const indent = '  '.repeat(item.depth);
     md += `${indent}${item.type === 'dir' ? '📁 ' : '📄 '}${path.basename(item.path)}\n`;
@@ -216,9 +230,9 @@ export function generateMarkdownKB(cwd) {
 
   // 6. Guidelines
   md += `## 6. Agent Navigation Rules\n`;
-  md += `1. **Surgical Memory**: Read \`.agent-kb/tasks/\`, \`.agent-kb/debug/\`, or \`.agent-kb/features/\` doc before code crawling.\n`;
-  md += `2. **Auto-Generate & Sync**: If \`.agent-kb/\` or \`PROJECT_KB.md\` is absent or outdated, generate it via \`npx @liulinnuha/lithium-kb\`.\n`;
-  md += `3. **Record Learnings**: When fixing bugs, save to \`.agent-kb/debug/<topic-name>.md\`. When working on tasks, update \`.agent-kb/tasks/<task-name>.md\`.\n`;
+  md += `1. **Surgical Memory**: Read \`${kbDirName}/tasks/\`, \`${kbDirName}/debug/\`, or \`${kbDirName}/features/\` doc before code crawling.\n`;
+  md += `2. **Auto-Generate & Sync**: If \`${kbDirName}/\` or \`PROJECT_KB.md\` is absent or outdated, generate it via \`npx @liulinnuha/lithium-kb\`.\n`;
+  md += `3. **Record Learnings**: When fixing bugs, save to \`${kbDirName}/debug/<topic-name>.md\`. When working on tasks, update \`${kbDirName}/tasks/<task-name>.md\`.\n`;
   md += `4. **Trigger Keywords**: Activate or sync on mentions of "kb", "knowledge base", "sync kb", "spec feature", "debug note".\n`;
   md += `5. **Deterministic Output**: Do not emit dynamic date timestamps or ephemeral session headers in generated knowledge files.\n`;
 
@@ -226,8 +240,10 @@ export function generateMarkdownKB(cwd) {
     md += `\n### Custom Project Directives (.agentrules)\n\`\`\`text\n${customRules}\n\`\`\`\n`;
   }
 
-  const outputPath = path.join(cwd, 'PROJECT_KB.md');
-  fs.writeFileSync(outputPath, md, 'utf8');
+  if (writeFiles) {
+    const outputPath = path.join(cwd, 'PROJECT_KB.md');
+    fs.writeFileSync(outputPath, md, 'utf8');
+  }
 
   return {
     markdown: md,

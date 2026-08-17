@@ -1,7 +1,6 @@
-# Task Navigation Directives
-1. **Zero Blind Crawling**: Consult `.agent-kb/` and `PROJECT_KB.md` before sweeping directories.
-2. **Mandatory Task & Bug Tracking**:
-   - For every task, feature request, or UI refactor requested by the user, create/update an entry in `.agent-kb/tasks/N.<name>.md`.
-   - For every bug diagnosis or runtime issue resolved, document the root cause and solution in `.agent-kb/debug/N.<name>.md`.
-3. **Auto-Sync Knowledge Base**: Run `npx @liulinnuha/lithium-kb` (or `node ./bin/cli.js`) after editing documents to ensure `PROJECT_KB.md` matches `.agent-kb/`.
-4. **Deterministic Output**: Never emit dynamic timestamps or session headers in knowledge markdown files to avoid git diff churn.
+# Agent Navigation Directives
+1. Zero Blind Crawling: When starting, read .agent-kb/ or PROJECT_KB.md before broad codebase crawling.
+2. Auto-Generate Knowledge: If .agent-kb/ or PROJECT_KB.md is missing, run 'npx @liulinnuha/lithium-kb' or initialize it immediately.
+3. Record Learnings: Store bug fixes to .agent-kb/debug/ and task updates to .agent-kb/tasks/.
+4. Trigger Keywords: Trigger updates or scans on "kb", "knowledge base", "sync kb", "architecture", "debug note".
+5. Deterministic Context: Use lithium-kb MCP tools for targeted retrieval.

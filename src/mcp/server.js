@@ -1,7 +1,7 @@
 import readline from 'node:readline';
 import fs from 'node:fs';
 import path from 'node:path';
-import { generateMarkdownKB } from '../core/generator.js';
+import { generateMarkdownKB, resolveKbDirectory } from '../core/generator.js';
 import { scanTree, extractKeySymbols } from '../core/scanner.js';
 import { KB_DIR_NAME } from '../core/constants.js';
 import { globalSseBroker } from '../server/sse.js';
@@ -46,7 +46,7 @@ export function startMcpServer(cwd) {
               },
               {
                 name: 'read_knowledge_doc',
-                description: 'Read a specific structured knowledge doc from .agent-kb/ (e.g. debug/1.debug-1.md, tasks/1.task-1.md).',
+                description: 'Read a specific structured knowledge doc from .lithium-kb/ (e.g. debug/quickstart-diagnostics.md, tasks/initial-setup.md).',
                 inputSchema: {
                   type: 'object',
                   properties: {
@@ -58,7 +58,7 @@ export function startMcpServer(cwd) {
               },
               {
                 name: 'write_knowledge_doc',
-                description: 'Create or update a structured knowledge doc in .agent-kb/ (e.g., logging a resolved debug note or task).',
+                description: 'Create or update a structured knowledge doc in .lithium-kb/ (e.g., logging a resolved debug note or task).',
                 inputSchema: {
                   type: 'object',
                   properties: {
@@ -83,7 +83,7 @@ export function startMcpServer(cwd) {
 
         if (toolName === 'list_knowledge_docs') {
           const safeCategory = ['architecture', 'debug', 'tasks', 'features'].includes(args.category) ? args.category : 'architecture';
-          const dir = path.join(cwd, KB_DIR_NAME, safeCategory);
+          const dir = path.join(resolveKbDirectory(cwd), safeCategory);
           const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => f.endsWith('.md')) : [];
           globalSseBroker.broadcast({
             id: Date.now(),
@@ -120,7 +120,7 @@ export function startMcpServer(cwd) {
         } else if (toolName === 'read_knowledge_doc') {
           const safeFilename = path.basename(args.filename || '');
           const safeCategory = ['architecture', 'debug', 'tasks', 'features'].includes(args.category) ? args.category : 'architecture';
-          const docPath = path.join(cwd, KB_DIR_NAME, safeCategory, safeFilename);
+          const docPath = path.join(resolveKbDirectory(cwd), safeCategory, safeFilename);
           if (fs.existsSync(docPath)) {
             const content = fs.readFileSync(docPath, 'utf8');
             globalSseBroker.broadcast({
@@ -147,7 +147,7 @@ export function startMcpServer(cwd) {
         } else if (toolName === 'write_knowledge_doc') {
           const safeFilename = path.basename(args.filename || '');
           const safeCategory = ['architecture', 'debug', 'tasks', 'features'].includes(args.category) ? args.category : 'tasks';
-          const targetDir = path.join(cwd, KB_DIR_NAME, safeCategory);
+          const targetDir = path.join(resolveKbDirectory(cwd), safeCategory);
           if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
           const docPath = path.join(targetDir, safeFilename);
           fs.writeFileSync(docPath, args.content || '', 'utf8');

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import path from 'node:path';
+import fs from 'node:fs';
 import { generateMarkdownKB } from '../src/core/generator.js';
 import { initializeProject, uninstallProject } from '../src/core/initializer.js';
 import { startServer } from '../src/server/http.js';
@@ -102,19 +103,28 @@ if (isInitMode) {
 if (isMcpMode) {
   startMcpServer(cwd);
 } else {
-  const data = generateMarkdownKB(cwd);
-  const outputPath = path.join(cwd, 'PROJECT_KB.md');
-  console.log(`[lithium-kb] Generated ${outputPath} & structured .agent-kb/ (${data.markdown.length} bytes)`);
+  const kbExists = fs.existsSync(path.join(cwd, '.lithium-kb')) || fs.existsSync(path.join(cwd, '.agent-kb')) || fs.existsSync(path.join(cwd, 'PROJECT_KB.md'));
 
-  if (isWatchMode) {
-    startFileWatcher(cwd);
+  if (!kbExists && !isUiMode) {
+    const targetKb = path.join(cwd, '.lithium-kb');
+    console.log(`ℹ No structured knowledge base (.lithium-kb/) found in: ${cwd}`);
+    console.log(`💡 Run 'npx @liulinnuha/lithium-kb init' to initialize this project.`);
+    process.exit(0);
   }
 
   if (isUiMode) {
     const portArg = args.find(a => a.startsWith('--port='));
     const port = portArg ? parseInt(portArg.split('=')[1], 10) : (process.env.PORT ? parseInt(process.env.PORT, 10) : 3030);
     startServer(targetDir, port);
-  } else if (!isWatchMode) {
-    console.log(`💡 Options: init (Auto-config agents), --ui (Web Graph UI), --watch (Auto-update), --mcp (MCP server)`);
+  } else {
+    const data = generateMarkdownKB(cwd, true);
+    const outputPath = path.join(cwd, 'PROJECT_KB.md');
+    console.log(`[lithium-kb] Synchronized ${outputPath} & knowledge base (${data.markdown.length} bytes)`);
+
+    if (isWatchMode) {
+      startFileWatcher(cwd);
+    } else {
+      console.log(`💡 Options: init (Auto-config agents), --ui (Web Graph UI), --watch (Auto-update), --mcp (MCP server)`);
+    }
   }
 }

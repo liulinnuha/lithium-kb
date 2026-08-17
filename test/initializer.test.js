@@ -26,17 +26,20 @@ test('initializer: initializeProject configures agent knowledge structure and cu
     assert.equal(res.isHomeDir, false);
     assert.equal(res.kbInitialized, true);
 
-    // Verify .agent-kb was created
-    assert.ok(fs.existsSync(path.join(tempDir, '.agent-kb', 'architecture')));
-    assert.ok(fs.existsSync(path.join(tempDir, '.agent-kb', 'tasks')));
-    assert.ok(fs.existsSync(path.join(tempDir, '.agent-kb', 'debug')));
-    assert.ok(fs.existsSync(path.join(tempDir, '.agent-kb', 'features')));
+    // Verify .lithium-kb was created
+    assert.ok(fs.existsSync(path.join(tempDir, '.lithium-kb', 'architecture')));
+    assert.ok(fs.existsSync(path.join(tempDir, '.lithium-kb', 'tasks')));
+    assert.ok(fs.existsSync(path.join(tempDir, '.lithium-kb', 'debug')));
+    assert.ok(fs.existsSync(path.join(tempDir, '.lithium-kb', 'features')));
 
     // Verify PROJECT_KB.md
     assert.ok(fs.existsSync(path.join(tempDir, 'PROJECT_KB.md')));
 
-    // Verify .agentrules
+    // Verify rule files
     assert.ok(fs.existsSync(path.join(tempDir, '.agentrules')));
+    assert.ok(fs.existsSync(path.join(tempDir, '.cursorrules')));
+    assert.ok(fs.existsSync(path.join(tempDir, 'CLAUDE.md')));
+    assert.ok(fs.existsSync(path.join(tempDir, '.windsurfrules')));
 
     // Verify .cursor/mcp.json
     const cursorMcpPath = path.join(tempDir, '.cursor', 'mcp.json');
@@ -48,7 +51,7 @@ test('initializer: initializeProject configures agent knowledge structure and cu
     // Test uninstall / cleanup
     const uninstallRes = uninstallProject(tempDir, true);
     assert.ok(uninstallRes.cleanedTargets.length > 0);
-    assert.equal(fs.existsSync(path.join(tempDir, '.agent-kb')), false);
+    assert.equal(fs.existsSync(path.join(tempDir, '.lithium-kb')), false);
     assert.equal(fs.existsSync(path.join(tempDir, 'PROJECT_KB.md')), false);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
