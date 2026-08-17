@@ -2,12 +2,13 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import { generateMarkdownKB } from '../src/core/generator.js';
-import { initializeProject, uninstallProject } from '../src/core/initializer.js';
+import { initializeProject, uninstallProject, isHomeOrRootDir } from '../src/core/initializer.js';
 import { startServer } from '../src/server/http.js';
 import { startFileWatcher } from '../src/server/watcher.js';
 import { startMcpServer } from '../src/mcp/server.js';
 
 const cwd = process.cwd();
+const isHome = isHomeOrRootDir(cwd);
 const args = process.argv.slice(2);
 
 const isInitMode = args.includes('init') || args.includes('--init');
@@ -103,10 +104,16 @@ if (isInitMode) {
 if (isMcpMode) {
   startMcpServer(cwd);
 } else {
+  // Hard prevent generating/syncing in HOME or ROOT unless in UI mode
+  if (isHome && !isUiMode) {
+    console.log(`ℹ Detected home/root directory (~): Skipped local knowledge base operation.`);
+    console.log(`💡 Navigate to a project directory before running lithium-kb.`);
+    process.exit(0);
+  }
+
   const kbExists = fs.existsSync(path.join(cwd, '.lithium-kb')) || fs.existsSync(path.join(cwd, '.agent-kb')) || fs.existsSync(path.join(cwd, 'PROJECT_KB.md'));
 
   if (!kbExists && !isUiMode) {
-    const targetKb = path.join(cwd, '.lithium-kb');
     console.log(`ℹ No structured knowledge base (.lithium-kb/) found in: ${cwd}`);
     console.log(`💡 Run 'npx @liulinnuha/lithium-kb init' to initialize this project.`);
     process.exit(0);
