@@ -57,6 +57,11 @@ Run this inside any project repository to initialize the knowledge structure and
 npx @liulinnuha/lithium-kb init
 ```
 
+Or run via interactive curl installer:
+```bash
+curl -fsSL https://raw.githubusercontent.com/liulinnuha/lithium-kb/main/bin/install.sh | bash
+```
+
 ---
 
 ### 🛠️ CLI Commands
@@ -79,6 +84,9 @@ npx @liulinnuha/lithium-kb uninstall
 
 # Completely purge MCP configurations and local .lithium-kb/ files
 npx @liulinnuha/lithium-kb uninstall --purge
+
+# Run interactive 1-line uninstaller wizard
+curl -fsSL https://raw.githubusercontent.com/liulinnuha/lithium-kb/main/bin/uninstall.sh | bash
 ```
 
 ### Global CLI Installation
