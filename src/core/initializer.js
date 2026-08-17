@@ -165,7 +165,7 @@ function getProjectAgentConfigs(cwd) {
 }
 
 /**
- * Injects lithium-kb configuration into an editor config file.
+ * Injects lithium-kb configuration into an editor config file (and upgrades legacy agent-kb entries).
  */
 function injectMcpConfig(target) {
   try {
@@ -173,12 +173,14 @@ function injectMcpConfig(target) {
 
     if (target.type === 'zedContextServers') {
       data.context_servers = data.context_servers || {};
+      delete data.context_servers['agent-kb']; // Clean up legacy
       data.context_servers['lithium-kb'] = {
         command: MCP_COMMAND,
         args: MCP_ARGS
       };
     } else {
       data.mcpServers = data.mcpServers || {};
+      delete data.mcpServers['agent-kb']; // Clean up legacy
       data.mcpServers['lithium-kb'] = {
         command: MCP_COMMAND,
         args: MCP_ARGS
@@ -190,6 +192,127 @@ function injectMcpConfig(target) {
   } catch {
     return false;
   }
+}
+
+/**
+ * Removes lithium-kb and legacy agent-kb configurations from an editor config file.
+ */
+function removeMcpConfig(target) {
+  try {
+    if (!fs.existsSync(target.path)) return false;
+    const data = readJsonSafe(target.path, {});
+    let modified = false;
+
+    if (target.type === 'zedContextServers' && data.context_servers) {
+      if (data.context_servers['lithium-kb']) {
+        delete data.context_servers['lithium-kb'];
+        modified = true;
+      }
+      if (data.context_servers['agent-kb']) {
+        delete data.context_servers['agent-kb'];
+        modified = true;
+      }
+    } else if (data.mcpServers) {
+      if (data.mcpServers['lithium-kb']) {
+        delete data.mcpServers['lithium-kb'];
+        modified = true;
+      }
+      if (data.mcpServers['agent-kb']) {
+        delete data.mcpServers['agent-kb'];
+        modified = true;
+      }
+    }
+
+    if (modified) {
+      writeJsonSafe(target.path, data);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Removes global Pi agent skill registrations if present.
+ */
+function uninstallGlobalSkills() {
+  const home = os.homedir();
+  const uninstalled = [];
+  const skillPaths = [
+    path.join(home, '.agents', 'skills', 'lithium-kb'),
+    path.join(home, '.agents', 'skills', 'agent-kb')
+  ];
+
+  for (const sp of skillPaths) {
+    if (fs.existsSync(sp)) {
+      try {
+        fs.rmSync(sp, { recursive: true, force: true });
+        uninstalled.push(sp);
+      } catch {}
+    }
+  }
+  return uninstalled;
+}
+
+/**
+ * Uninstalls lithium-kb and agent-kb configurations from editors, workspace, and global skills.
+ */
+export function uninstallProject(cwd = process.cwd(), cleanFiles = false) {
+  const isHome = isHomeOrRootDir(cwd);
+  const results = {
+    cleanedTargets: [],
+    removedFiles: [],
+    uninstalledSkills: []
+  };
+
+  // 1. Remove project-level configs
+  if (!isHome) {
+    const projectConfigs = getProjectAgentConfigs(cwd);
+    for (const cfg of projectConfigs) {
+      if (removeMcpConfig(cfg)) {
+        results.cleanedTargets.push(cfg);
+      }
+    }
+
+    if (cleanFiles) {
+      const kbDir = path.join(cwd, '.agent-kb');
+      const projectKb = path.join(cwd, 'PROJECT_KB.md');
+      const agentRules = path.join(cwd, '.agentrules');
+
+      if (fs.existsSync(kbDir)) {
+        try {
+          fs.rmSync(kbDir, { recursive: true, force: true });
+          results.removedFiles.push(kbDir);
+        } catch {}
+      }
+      if (fs.existsSync(projectKb)) {
+        try {
+          fs.unlinkSync(projectKb);
+          results.removedFiles.push(projectKb);
+        } catch {}
+      }
+      if (fs.existsSync(agentRules)) {
+        try {
+          fs.unlinkSync(agentRules);
+          results.removedFiles.push(agentRules);
+        } catch {}
+      }
+    }
+  }
+
+  // 2. Remove global editor configurations
+  const globalConfigs = getGlobalAgentConfigs();
+  for (const cfg of globalConfigs) {
+    if (removeMcpConfig(cfg)) {
+      results.cleanedTargets.push(cfg);
+    }
+  }
+
+  // 3. Remove global agent skills
+  results.uninstalledSkills = uninstallGlobalSkills();
+
+  return results;
 }
 
 /**
@@ -222,9 +345,11 @@ export function initializeProject(cwd = process.cwd()) {
       const agentRulesPath = path.join(cwd, '.agentrules');
       if (!fs.existsSync(agentRulesPath)) {
         const defaultRules = `# Agent Navigation Directives
-1. Zero Blind Crawling: Consult .agent-kb/ or PROJECT_KB.md before crawling files.
-2. Record Learnings: Store bug fixes to .agent-kb/debug/ and tasks to .agent-kb/tasks/.
-3. Deterministic Context: Use lithium-kb MCP tools for fast retrieval.
+1. Zero Blind Crawling: When starting, read .agent-kb/ or PROJECT_KB.md before broad codebase crawling.
+2. Auto-Generate Knowledge: If .agent-kb/ or PROJECT_KB.md is missing, run 'npx @liulinnuha/lithium-kb' or initialize it immediately.
+3. Record Learnings: Store bug fixes to .agent-kb/debug/ and task updates to .agent-kb/tasks/.
+4. Trigger Keywords: Trigger updates or scans on "kb", "knowledge base", "sync kb", "architecture", "debug note".
+5. Deterministic Context: Use lithium-kb MCP tools for targeted retrieval.
 `;
         fs.writeFileSync(agentRulesPath, defaultRules, 'utf8');
         results.agentRulesCreated = true;

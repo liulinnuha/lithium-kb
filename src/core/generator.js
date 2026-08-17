@@ -217,8 +217,10 @@ export function generateMarkdownKB(cwd) {
   // 6. Guidelines
   md += `## 6. Agent Navigation Rules\n`;
   md += `1. **Surgical Memory**: Read \`.agent-kb/tasks/\`, \`.agent-kb/debug/\`, or \`.agent-kb/features/\` doc before code crawling.\n`;
-  md += `2. **Record Learnings**: When fixing bugs, save to \`.agent-kb/debug/N.<issue>.md\`. When finishing tasks, update \`.agent-kb/tasks/\`.\n`;
-  md += `3. **Deterministic Output**: Do not emit dynamic date timestamps or ephemeral session headers in generated knowledge files.\n`;
+  md += `2. **Auto-Generate & Sync**: If \`.agent-kb/\` or \`PROJECT_KB.md\` is absent or outdated, generate it via \`npx @liulinnuha/lithium-kb\`.\n`;
+  md += `3. **Record Learnings**: When fixing bugs, save to \`.agent-kb/debug/N.<issue>.md\`. When finishing tasks, update \`.agent-kb/tasks/\`.\n`;
+  md += `4. **Trigger Keywords**: Activate or sync on mentions of "kb", "knowledge base", "sync kb", "spec feature", "debug note".\n`;
+  md += `5. **Deterministic Output**: Do not emit dynamic date timestamps or ephemeral session headers in generated knowledge files.\n`;
 
   if (customRules) {
     md += `\n### Custom Project Directives (.agentrules)\n\`\`\`text\n${customRules}\n\`\`\`\n`;
@@ -230,6 +232,7 @@ export function generateMarkdownKB(cwd) {
   return {
     markdown: md,
     rootName,
+    cwd: path.resolve(cwd),
     projectType,
     docs,
     filesCount: files.length,

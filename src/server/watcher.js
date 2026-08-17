@@ -12,7 +12,7 @@ export function startFileWatcher(cwd, onUpdate) {
   let timer = null;
 
   return fs.watch(cwd, { recursive: true }, (eventType, filename) => {
-    if (!filename || filename === 'PROJECT_KB.md' || filename.startsWith('.git') || filename.includes('node_modules')) return;
+    if (!filename || filename === 'PROJECT_KB.md' || filename.startsWith('.git') || filename.includes('node_modules') || filename.startsWith(KB_DIR_NAME)) return;
     clearTimeout(timer);
     timer = setTimeout(() => {
       console.log(`[lithium-kb] Detected change in ${filename}, updating knowledge base...`);

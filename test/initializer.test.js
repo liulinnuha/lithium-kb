@@ -4,7 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { initializeProject, isHomeOrRootDir } from '../src/core/initializer.js';
+import { initializeProject, uninstallProject, isHomeOrRootDir } from '../src/core/initializer.js';
 
 test('initializer: isHomeOrRootDir accurately identifies home directory', () => {
   assert.equal(isHomeOrRootDir(os.homedir()), true);
@@ -44,6 +44,12 @@ test('initializer: initializeProject configures agent knowledge structure and cu
     const cursorMcp = JSON.parse(fs.readFileSync(cursorMcpPath, 'utf8'));
     assert.ok(cursorMcp.mcpServers['lithium-kb']);
     assert.equal(cursorMcp.mcpServers['lithium-kb'].command, 'npx');
+
+    // Test uninstall / cleanup
+    const uninstallRes = uninstallProject(tempDir, true);
+    assert.ok(uninstallRes.cleanedTargets.length > 0);
+    assert.equal(fs.existsSync(path.join(tempDir, '.agent-kb')), false);
+    assert.equal(fs.existsSync(path.join(tempDir, 'PROJECT_KB.md')), false);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }

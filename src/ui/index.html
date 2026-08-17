@@ -41,8 +41,14 @@
     <aside id="mainSidebar" aria-label="Knowledge Base Explorer">
       <div class="panel">
         <div class="panel-header">
-          <h3>Structured Memory (.agent-kb/)</h3>
-          <span class="doc-count-badge" id="docCountBadge">0 docs</span>
+          <div class="panel-title-wrap">
+            <h3>Structured Memory (.agent-kb/)</h3>
+            <span class="doc-count-badge" id="docCountBadge">0 docs</span>
+          </div>
+          <div class="tree-actions">
+            <button type="button" class="btn-icon-xs" onclick="expandAllFolders()" title="Expand All Folders" aria-label="Expand All Folders">➕</button>
+            <button type="button" class="btn-icon-xs" onclick="collapseAllFolders()" title="Collapse All Folders" aria-label="Collapse All Folders">➖</button>
+          </div>
         </div>
         <div class="search-box">
           <input
@@ -196,7 +202,11 @@
   <script>
     /* __INITIAL_DATA_PLACEHOLDER__ */
     if (window.__INITIAL_DATA__) {
-      document.getElementById('headerBadge').innerText = window.__INITIAL_DATA__.projectType || 'Project';
+      const badgeEl = document.getElementById('headerBadge');
+      if (badgeEl) {
+        badgeEl.innerText = window.__INITIAL_DATA__.cwd || window.__INITIAL_DATA__.rootName || 'Project';
+        badgeEl.title = `Working Directory: ${window.__INITIAL_DATA__.cwd || ''}`;
+      }
       document.getElementById('tokensSavedVal').innerText = (window.__INITIAL_DATA__.cumulativeTokensSaved || 4250).toLocaleString();
     }
   </script>

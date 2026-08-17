@@ -19,6 +19,7 @@ let isDraggingCanvas = false;
 let dragStart = { x: 0, y: 0 };
 
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const expandedFolders = new Set(Object.keys(structuredDocs)); // Keep track of open folders
 
 export function initGraphData() {
   const nodeMap = new Map();
@@ -63,33 +64,81 @@ export function renderKbTree(filter = '') {
   let html = '';
 
   if (!f || 'project_kb.md'.includes(f) || 'index'.includes(f)) {
-    html += '<button type="button" class="kb-tree-item active" id="kb-item-root">📄 PROJECT_KB.md (Index)</button>';
+    const isRootActive = currentDocName === 'PROJECT_KB.md' ? ' active' : '';
+    html += `<button type="button" class="kb-tree-item${isRootActive}" id="kb-item-root">
+      <span class="file-icon">⚡</span>
+      <span class="file-label">PROJECT_KB.md</span>
+      <span class="file-badge">index</span>
+    </button>`;
   }
 
-  const catIcons = { architecture: '📁', debug: '🐛', tasks: '📋', features: '✨' };
+  const catIcons = {
+    architecture: { open: '📂', closed: '📁' },
+    debug: { open: '📂', closed: '📁' },
+    tasks: { open: '📂', closed: '📁' },
+    features: { open: '📂', closed: '📁' }
+  };
 
   for (const [cat, items] of Object.entries(structuredDocs)) {
     const matchingDocs = items ? items.filter(d => !f || d.filename.toLowerCase().includes(f) || cat.includes(f) || (d.title && d.title.toLowerCase().includes(f))) : [];
 
     if (!f || matchingDocs.length > 0 || cat.includes(f)) {
-      html += `<div class="kb-tree-category">${catIcons[cat] || '📁'} ${cat}/</div>`;
+      const isExpanded = f.length > 0 || expandedFolders.has(cat);
+      const icon = isExpanded ? (catIcons[cat]?.open || '📂') : (catIcons[cat]?.closed || '📁');
+      const arrow = isExpanded ? '▾' : '▸';
+
+      html += `<div class="kb-folder-node">
+        <div class="kb-tree-category" data-cat="${cat}" role="button" tabindex="0" aria-expanded="${isExpanded}">
+          <span class="tree-arrow">${arrow}</span>
+          <span class="folder-icon">${icon}</span>
+          <span class="folder-label">${cat}/</span>
+          <span class="folder-count">${matchingDocs.length}</span>
+        </div>
+        <div class="kb-tree-items${isExpanded ? ' open' : ''}">`;
+
       if (matchingDocs.length > 0) {
         for (const doc of matchingDocs) {
-          html += `<button type="button" class="kb-tree-item" data-path="${doc.relPath}">📄 ${doc.filename}</button>`;
+          const isActive = currentDocName === doc.relPath ? ' active' : '';
+          html += `<button type="button" class="kb-tree-item${isActive}" data-path="${doc.relPath}">
+            <span class="file-icon">📄</span>
+            <span class="file-label">${doc.filename}</span>
+          </button>`;
         }
       } else if (!f) {
-        html += '<div style="font-size:0.75rem; color:var(--muted); margin-left:1rem;">(empty)</div>';
+        html += '<div class="kb-tree-empty">empty folder</div>';
       }
+      html += `</div></div>`;
     }
   }
 
   if (!html) {
-    html = '<div style="font-size:0.78rem; color:var(--muted); padding:0.5rem;">No matching documents found.</div>';
+    html = '<div class="kb-tree-no-results">No matching documents found.</div>';
   }
 
   container.innerHTML = html;
 
-  // Add event listeners
+  // Folder toggle listeners
+  container.querySelectorAll('.kb-tree-category').forEach(catHeader => {
+    const toggleFolder = () => {
+      const cat = catHeader.getAttribute('data-cat');
+      if (expandedFolders.has(cat)) {
+        expandedFolders.delete(cat);
+      } else {
+        expandedFolders.add(cat);
+      }
+      renderKbTree(document.getElementById('kbSearchInput')?.value || '');
+    };
+
+    catHeader.addEventListener('click', toggleFolder);
+    catHeader.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleFolder();
+      }
+    });
+  });
+
+  // Document item selection listeners
   document.getElementById('kb-item-root')?.addEventListener('click', function() {
     document.querySelectorAll('.kb-tree-item').forEach(i => i.classList.remove('active'));
     this.classList.add('active');
@@ -103,6 +152,16 @@ export function renderKbTree(filter = '') {
       loadDoc(this.getAttribute('data-path'));
     });
   });
+}
+
+export function expandAllFolders() {
+  for (const cat of Object.keys(structuredDocs)) expandedFolders.add(cat);
+  renderKbTree(document.getElementById('kbSearchInput')?.value || '');
+}
+
+export function collapseAllFolders() {
+  expandedFolders.clear();
+  renderKbTree(document.getElementById('kbSearchInput')?.value || '');
 }
 
 export function filterKbTree(query) {
@@ -500,6 +559,13 @@ export async function regenerateKB() {
     currentMarkdown = data.markdown;
     graphData = data.graph;
     structuredDocs = data.docs;
+    if (data.cwd) {
+      const badgeEl = document.getElementById('headerBadge');
+      if (badgeEl) {
+        badgeEl.innerText = data.cwd;
+        badgeEl.title = `Working Directory: ${data.cwd}`;
+      }
+    }
     initGraphData();
     renderKbTree();
     renderDocs();
@@ -653,6 +719,8 @@ window.copyMarkdown = copyMarkdown;
 window.regenerateKB = regenerateKB;
 window.filterKbTree = filterKbTree;
 window.clearEventFeed = clearEventFeed;
+window.collapseAllFolders = collapseAllFolders;
+window.expandAllFolders = expandAllFolders;
 window.toggleSidebar = toggleSidebar;
 window.toggleHelpModal = toggleHelpModal;
 

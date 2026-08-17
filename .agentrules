@@ -1,5 +1,7 @@
-# lithium-kb Agent Directives
-1. Zero Runtime Dependencies: Always use Node.js standard library (node:*).
-2. Deterministic Knowledge Generation: Never emit dynamic timestamps or session headers in PROJECT_KB.md or .agent-kb/ files to avoid unnecessary git diff churn.
-3. Modular Memory: Keep .agent-kb/ organized under architecture/, debug/, tasks/, features/.
-4. Comprehensive Testing: Keep test coverage using Node's native test runner (node --test).
+# Task Navigation Directives
+1. **Zero Blind Crawling**: Consult `.agent-kb/` and `PROJECT_KB.md` before sweeping directories.
+2. **Mandatory Task & Bug Tracking**:
+   - For every task, feature request, or UI refactor requested by the user, create/update an entry in `.agent-kb/tasks/N.<name>.md`.
+   - For every bug diagnosis or runtime issue resolved, document the root cause and solution in `.agent-kb/debug/N.<name>.md`.
+3. **Auto-Sync Knowledge Base**: Run `npx @liulinnuha/lithium-kb` (or `node ./bin/cli.js`) after editing documents to ensure `PROJECT_KB.md` matches `.agent-kb/`.
+4. **Deterministic Output**: Never emit dynamic timestamps or session headers in knowledge markdown files to avoid git diff churn.

@@ -81,7 +81,25 @@ export function startMcpServer(cwd) {
         const toolName = params?.name;
         const args = params?.arguments || {};
 
-        if (toolName === 'get_project_memory') {
+        if (toolName === 'list_knowledge_docs') {
+          const safeCategory = ['architecture', 'debug', 'tasks', 'features'].includes(args.category) ? args.category : 'architecture';
+          const dir = path.join(cwd, KB_DIR_NAME, safeCategory);
+          const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => f.endsWith('.md')) : [];
+          globalSseBroker.broadcast({
+            id: Date.now(),
+            nodeId: `list-${safeCategory}`,
+            label: `${safeCategory}/`,
+            query: `List ${safeCategory} docs`,
+            agent: 'MCP Coding Agent',
+            time: new Date().toLocaleTimeString(),
+            tokensSaved: 500
+          });
+          sendJsonRpc({
+            jsonrpc: '2.0',
+            id,
+            result: { content: [{ type: 'text', text: JSON.stringify(files) }] }
+          });
+        } else if (toolName === 'get_project_memory') {
           const data = generateMarkdownKB(cwd);
           globalSseBroker.broadcast({
             id: Date.now(),
