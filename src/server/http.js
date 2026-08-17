@@ -22,7 +22,7 @@ export function startServer(cwd, port = 3030) {
 
     // Static Assets
     if (pathname === '/' && req.method === 'GET') {
-      const data = generateMarkdownKB(cwd);
+      const data = generateMarkdownKB(cwd, false);
       data.cumulativeTokensSaved = globalSseBroker.getTokensSaved();
 
       const htmlPath = path.join(UI_DIR, 'index.html');
@@ -52,7 +52,7 @@ export function startServer(cwd, port = 3030) {
       globalSseBroker.addClient(res);
       req.on('close', () => globalSseBroker.removeClient(res));
     } else if (pathname === '/api/kb' && req.method === 'GET') {
-      const data = generateMarkdownKB(cwd);
+      const data = generateMarkdownKB(cwd, false);
       data.cumulativeTokensSaved = globalSseBroker.getTokensSaved();
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(data));
@@ -101,7 +101,7 @@ export function startServer(cwd, port = 3030) {
         }
       });
     } else if (pathname === '/api/regenerate' && req.method === 'POST') {
-      const data = generateMarkdownKB(cwd);
+      const data = generateMarkdownKB(cwd, false);
       data.cumulativeTokensSaved = globalSseBroker.getTokensSaved();
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(data));

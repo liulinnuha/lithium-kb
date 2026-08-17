@@ -104,8 +104,8 @@ if (isInitMode) {
 if (isMcpMode) {
   startMcpServer(cwd);
 } else {
-  // Hard prevent generating/syncing in HOME or ROOT unless in UI mode
-  if (isHome && !isUiMode) {
+  // Hard prevent generating/syncing or starting UI in HOME or ROOT
+  if (isHome) {
     console.log(`ℹ Detected home/root directory (~): Skipped local knowledge base operation.`);
     console.log(`💡 Navigate to a project directory before running lithium-kb.`);
     process.exit(0);
