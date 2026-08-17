@@ -1,6 +1,6 @@
 {
   "name": "@liulinnuha/lithium-kb",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Fast, in-memory structured markdown knowledge base (.agent-kb/) with 2D neural graph visualization, live SSE activity stream, and MCP stdio integration.",
   "type": "module",
   "main": "src/core/generator.js",
@@ -11,8 +11,8 @@
     "./mcp": "./src/mcp/server.js"
   },
   "bin": {
-    "lithium-kb": "./bin/cli.js",
-    "agent-kb": "./bin/cli.js"
+    "lithium-kb": "bin/cli.js",
+    "agent-kb": "bin/cli.js"
   },
   "files": [
     "bin",
