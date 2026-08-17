@@ -28,7 +28,7 @@ export function ensureKnowledgeBaseStructure(cwd) {
   const archDir = path.join(kbRoot, 'architecture');
   if (fs.readdirSync(archDir).length === 0) {
     fs.writeFileSync(
-      path.join(archDir, '1.overview.md'),
+      path.join(archDir, 'overview.md'),
       `# Architecture Overview\n\n- **Project:** ${path.basename(cwd)}\n- **Role:** High-level system structure, entrypoints, and communication contracts.\n`,
       'utf8'
     );
@@ -37,8 +37,8 @@ export function ensureKnowledgeBaseStructure(cwd) {
   const taskDir = path.join(kbRoot, 'tasks');
   if (fs.readdirSync(taskDir).length === 0) {
     fs.writeFileSync(
-      path.join(taskDir, '1.task-initial-setup.md'),
-      `# Task 1: Project Setup\n\n- **Status:** Complete\n- **Goal:** Initialize project structure and baseline modules.\n`,
+      path.join(taskDir, 'initial-setup.md'),
+      `# Initial Project Setup\n\n- **Status:** Complete\n- **Goal:** Initialize project structure and baseline modules.\n`,
       'utf8'
     );
   }
@@ -46,8 +46,8 @@ export function ensureKnowledgeBaseStructure(cwd) {
   const debugDir = path.join(kbRoot, 'debug');
   if (fs.readdirSync(debugDir).length === 0) {
     fs.writeFileSync(
-      path.join(debugDir, '1.debug-quickstart.md'),
-      `# Debug 1: Quickstart Diagnostics\n\n- **Issue:** Token bloat during multi-file repository exploration.\n- **Resolution:** Route agents to in-memory .agent-kb/ directory map.\n`,
+      path.join(debugDir, 'quickstart-diagnostics.md'),
+      `# Quickstart Diagnostics\n\n- **Issue:** Token bloat during multi-file repository exploration.\n- **Resolution:** Route agents to in-memory .agent-kb/ directory map.\n`,
       'utf8'
     );
   }
@@ -55,8 +55,8 @@ export function ensureKnowledgeBaseStructure(cwd) {
   const featDir = path.join(kbRoot, 'features');
   if (fs.readdirSync(featDir).length === 0) {
     fs.writeFileSync(
-      path.join(featDir, '1.feature-spec.md'),
-      `# Feature 1: Core Feature Specification\n\n- **Status:** Active\n- **Description:** Core requirements and user workflows.\n`,
+      path.join(featDir, 'core-specs.md'),
+      `# Core Feature Specifications\n\n- **Status:** Active\n- **Description:** Core requirements and user workflows.\n`,
       'utf8'
     );
   }
@@ -218,7 +218,7 @@ export function generateMarkdownKB(cwd) {
   md += `## 6. Agent Navigation Rules\n`;
   md += `1. **Surgical Memory**: Read \`.agent-kb/tasks/\`, \`.agent-kb/debug/\`, or \`.agent-kb/features/\` doc before code crawling.\n`;
   md += `2. **Auto-Generate & Sync**: If \`.agent-kb/\` or \`PROJECT_KB.md\` is absent or outdated, generate it via \`npx @liulinnuha/lithium-kb\`.\n`;
-  md += `3. **Record Learnings**: When fixing bugs, save to \`.agent-kb/debug/N.<issue>.md\`. When finishing tasks, update \`.agent-kb/tasks/\`.\n`;
+  md += `3. **Record Learnings**: When fixing bugs, save to \`.agent-kb/debug/<topic-name>.md\`. When working on tasks, update \`.agent-kb/tasks/<task-name>.md\`.\n`;
   md += `4. **Trigger Keywords**: Activate or sync on mentions of "kb", "knowledge base", "sync kb", "spec feature", "debug note".\n`;
   md += `5. **Deterministic Output**: Do not emit dynamic date timestamps or ephemeral session headers in generated knowledge files.\n`;
 

@@ -22,15 +22,15 @@ When using `lithium-kb`:
 your-project/
 ├── .agent-kb/
 │   ├── architecture/
-│   │   └── 1.overview.md          # Topology, entry points, service boundaries
+│   │   └── overview.md            # Topology, entry points, service boundaries
 │   ├── debug/
-│   │   ├── 1.debug-quickstart.md  # Solved issues & root-cause postmortems
+│   │   ├── quickstart-diagnostics.md # Solved issues & root-cause postmortems
 │   │   └── ...
 │   ├── tasks/
-│   │   ├── 1.task-initial-setup.md # Active backlog & task specs
+│   │   ├── initial-setup.md       # Active backlog & task specs
 │   │   └── ...
 │   └── features/
-│       ├── 1.feature-spec.md      # Detailed feature specifications
+│       ├── core-specs.md          # Detailed feature specifications
 │       └── ...
 ├── .agentrules                    # Agent navigation directives
 └── PROJECT_KB.md                  # Compact global in-memory index (< 2KB)
@@ -39,11 +39,11 @@ your-project/
 ## How Agents Use This
 
 1. **Orientation**: When starting work in a repo, read `PROJECT_KB.md` into context.
-2. **Modular Deep Dives**: When assigned a task or bug, read *only* `.agent-kb/tasks/N.<name>.md` or `.agent-kb/debug/N.<name>.md` instead of blindly crawling the whole codebase.
+2. **Modular Deep Dives**: When assigned a task or bug, read *only* `.agent-kb/tasks/<task-name>.md` or `.agent-kb/debug/<issue-name>.md` instead of blindly crawling the whole codebase.
 3. **Persisting Knowledge**:
-   - Fixed a bug? Save the postmortem to `.agent-kb/debug/N.<name>.md`.
-   - Building a feature? Check or create `.agent-kb/features/N.<name>.md`.
-   - Completed a task? Mark status in `.agent-kb/tasks/N.<name>.md`.
+   - Fixed a bug? Save the postmortem to `.agent-kb/debug/<issue-name>.md`.
+   - Building a feature? Check or create `.agent-kb/features/<feature-name>.md`.
+   - Completed a task? Mark status in `.agent-kb/tasks/<task-name>.md`.
    - Resync the global index: Run `npx @liulinnuha/lithium-kb`.
 
 ## Commands
