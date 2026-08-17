@@ -14,32 +14,36 @@ A high-performance structured project knowledge base generator, neural network m
 
 ## 📁 Structured Knowledge Hierarchy
 
-Whenever `lithium-kb` is run, it organizes project memory into dedicated, modular knowledge categories:
+Whenever `lithium-kb` is run, it organizes project memory into clean, modular knowledge categories without clunky numeric prefixes:
 
 ```text
 your-project/
 ├── .agent-kb/
 │   ├── architecture/
-│   │   └── 1.overview.md          # Topology, entry points, service boundaries
+│   │   └── overview.md             # Topology, entry points, service boundaries
 │   ├── debug/
-│   │   ├── 1.debug-quickstart.md  # Resolved incidents & root-cause postmortems
+│   │   ├── quickstart-diagnostics.md # Resolved incidents & root-cause postmortems
 │   │   └── ...
 │   ├── tasks/
-│   │   ├── 1.task-initial-setup.md # Active sprint tasks & acceptance criteria
+│   │   ├── initial-setup.md        # Active sprint tasks & acceptance criteria
+│   │   ├── explorer-ui.md
 │   │   └── ...
 │   └── features/
-│       ├── 1.feature-spec.md      # Detailed feature specifications
+│       ├── core-specs.md           # Detailed feature specifications
 │       └── ...
-└── PROJECT_KB.md                  # Compact global index (< 2KB)
+├── .agentrules                     # Explicit AI agent navigation directives
+└── PROJECT_KB.md                   # Compact global index (< 2KB)
 ```
 
 ---
 
 ## ⚡ Why Structured Knowledge Matters
 
-1. **Surgical Token Efficiency**: When an agent works on a bug or task, it reads *only* `.agent-kb/tasks/N.<name>.md` or `.agent-kb/debug/N.<name>.md` instead of blindly traversing thousands of codebase lines.
+1. **Surgical Token Efficiency**: When an agent works on a bug or task, it reads *only* `.agent-kb/tasks/<name>.md` or `.agent-kb/debug/<name>.md` instead of blindly traversing thousands of codebase lines.
 2. **Deterministic Context**: Agents don't lose track of multi-step plans across sessions.
-3. **Interactive Neural Visualizer**: Observe live memory hits, dynamic impulse animations, and token savings as agents query knowledge nodes.
+3. **Interactive Neural Visualizer**:
+   - **File Explorer Sidebar**: Collapsible category trees with directory rails, item count badges, and expand/collapse quick actions.
+   - **Real-Time Impulses**: Observe live memory hits, dynamic impulse animations, and token savings as agents query knowledge nodes.
 4. **Zero Dependencies**: Pure Node.js standard library — zero install footprint, lightning fast.
 
 ---
@@ -55,7 +59,7 @@ npx @liulinnuha/lithium-kb init
 
 ---
 
-### Additional Commands
+### 🛠️ CLI Commands
 
 ```bash
 # Generate / Sync knowledge base (.agent-kb/ and PROJECT_KB.md)
@@ -69,9 +73,15 @@ npx @liulinnuha/lithium-kb --watch
 
 # Launch MCP stdio server manually
 npx @liulinnuha/lithium-kb --mcp
+
+# Clean MCP configurations & legacy references from all IDEs
+npx @liulinnuha/lithium-kb uninstall
+
+# Completely purge MCP configurations and local .agent-kb/ files
+npx @liulinnuha/lithium-kb uninstall --purge
 ```
 
-### Method 2: Global CLI Installation
+### Global CLI Installation
 Install globally on your machine to use `lithium-kb` anywhere:
 ```bash
 npm install -g @liulinnuha/lithium-kb
