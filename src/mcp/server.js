@@ -41,7 +41,7 @@ export function startMcpServer(cwd) {
           id,
           result: {
             protocolVersion: '2024-11-05',
-            serverInfo: { name: 'lithium-kb', version: '1.2.5' },
+            serverInfo: { name: 'lithium-kb', version: '1.3.0' },
             capabilities: { tools: {}, resources: {} }
           }
         });
