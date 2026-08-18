@@ -459,8 +459,14 @@ export function renderDocs() {
     tokenEstimate.innerText = `⚡ ~${estimatedTokens.toLocaleString()} tokens`;
   }
 
+  let formattedContent = currentMarkdown;
+  if (!currentDocName.endsWith('.md') && !currentDocName.endsWith('.markdown')) {
+    const ext = currentDocName.split('.').pop() || '';
+    formattedContent = `# \`${currentDocName}\`\n\n\`\`\`${ext}\n${currentMarkdown}\n\`\`\``;
+  }
+
   if (renderEl && window.marked) {
-    renderEl.innerHTML = window.marked.parse(currentMarkdown);
+    renderEl.innerHTML = window.marked.parse(formattedContent);
     attachCodeCopyButtons();
     generateToc();
   }
@@ -591,6 +597,9 @@ function getCanvasCoords(e) {
   return { rawX, rawY, worldX, worldY };
 }
 
+let mouseDownPos = { x: 0, y: 0 };
+let clickedNode = null;
+
 // Canvas interactions
 canvas.addEventListener('mousemove', e => {
   const { rawX, rawY, worldX, worldY } = getCanvasCoords(e);
@@ -621,6 +630,10 @@ canvas.addEventListener('mousemove', e => {
     tooltip.style.top = `${Math.min(rawY + 15, height - 120)}px`;
     document.getElementById('ttHeader').innerText = hoveredNode.label;
     document.getElementById('ttBody').innerText = hoveredNode.path ? `Path: ${hoveredNode.path}` : `Type: ${hoveredNode.group || 'Node'}`;
+    const footer = document.getElementById('ttFooter');
+    if (footer) {
+      footer.innerText = (hoveredNode.path || hoveredNode.id === 'node-root') ? 'Click to view document' : (hoveredNode.group === 'category' ? 'Click to expand category' : 'Interactive node');
+    }
   } else if (tooltip) {
     tooltip.style.display = 'none';
   }
@@ -628,14 +641,13 @@ canvas.addEventListener('mousemove', e => {
 
 canvas.addEventListener('mousedown', e => {
   const { worldX, worldY } = getCanvasCoords(e);
+  mouseDownPos = { x: e.clientX, y: e.clientY };
   const hit = nodes.find(n => Math.hypot(n.x - worldX, n.y - worldY) < (n.radius + 6) / scale);
 
   if (hit) {
     draggedNode = hit;
+    clickedNode = hit;
     hit.pulseVal = 1;
-    if (hit.path) {
-      loadDoc(hit.path);
-    }
     for (const l of links) {
       if (l.source === hit) fireImpulse(hit.id, l.target.id);
       if (l.target === hit) fireImpulse(hit.id, l.source.id);
@@ -643,6 +655,7 @@ canvas.addEventListener('mousedown', e => {
   } else {
     isDraggingCanvas = true;
     dragStart = { x: e.clientX, y: e.clientY };
+    clickedNode = null;
   }
 });
 
@@ -652,6 +665,32 @@ canvas.addEventListener('wheel', e => {
   const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
   scale = Math.min(Math.max(scale * zoomFactor, 0.4), 2.8);
 }, { passive: false });
+
+window.addEventListener('mouseup', (e) => {
+  if (clickedNode) {
+    const dx = Math.abs(e.clientX - mouseDownPos.x);
+    const dy = Math.abs(e.clientY - mouseDownPos.y);
+    if (dx < 6 && dy < 6) {
+      // Clean click: open document directly
+      if (clickedNode.path) {
+        loadDoc(clickedNode.path);
+      } else if (clickedNode.id === 'node-root') {
+        loadDoc('PROJECT_KB.md');
+      } else if (clickedNode.group === 'category') {
+        const catKey = clickedNode.id.replace('cat-', '');
+        const mappedCat = { arch: 'architecture', tasks: 'tasks', debug: 'debug', features: 'features' }[catKey];
+        if (mappedCat) {
+          expandedFolders.add(mappedCat);
+          renderKbTree(document.getElementById('kbSearchInput')?.value || '');
+          showToast(`Expanded ${mappedCat}/`);
+        }
+      }
+    }
+  }
+  draggedNode = null;
+  clickedNode = null;
+  isDraggingCanvas = false;
+});
 
 // Keyboard shortcuts
 window.addEventListener('keydown', (e) => {
@@ -700,11 +739,6 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     toggleSidebar();
   }
-});
-
-window.addEventListener('mouseup', () => {
-  draggedNode = null;
-  isDraggingCanvas = false;
 });
 
 window.addEventListener('resize', resize);

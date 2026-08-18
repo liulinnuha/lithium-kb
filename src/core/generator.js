@@ -129,7 +129,7 @@ export function buildNeuralGraphData(cwd) {
   const files = items.filter(i => i.type === 'file' && !i.path.startsWith(KB_DIR_NAME));
 
   const nodes = [
-    { id: 'node-root', label: `Agent Core (${rootName})`, group: 'core', val: 28, color: '#38bdf8' },
+    { id: 'node-root', label: `Agent Core (${rootName})`, group: 'core', val: 28, color: '#38bdf8', path: 'PROJECT_KB.md' },
     { id: 'cat-arch', label: '📁 architecture/', group: 'category', val: 20, color: '#818cf8' },
     { id: 'cat-tasks', label: '📋 tasks/', group: 'category', val: 20, color: '#10b981' },
     { id: 'cat-debug', label: '🐛 debug/', group: 'category', val: 20, color: '#f59e0b' },
