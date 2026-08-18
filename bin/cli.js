@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import fs from 'node:fs';
-import { generateMarkdownKB } from '../src/core/generator.js';
+import { generateMarkdownKB, searchKnowledgeBase } from '../src/core/generator.js';
 import { initializeProject, uninstallProject, isHomeOrRootDir } from '../src/core/initializer.js';
 import { startServer } from '../src/server/http.js';
 import { startFileWatcher } from '../src/server/watcher.js';
@@ -18,6 +18,8 @@ const isUiMode = args.includes('--ui') || args.includes('-u') || args.includes('
 const isWatchMode = args.includes('--watch') || args.includes('-w');
 const isMcpMode = args.includes('--mcp');
 const isHelpMode = args.includes('--help') || args.includes('-h');
+const queryIdx = args.findIndex(a => a === 'query' || a === 'search' || a.startsWith('--query='));
+const isQueryMode = queryIdx !== -1;
 const pathArg = args.find(a => a.startsWith('--path='));
 const targetDir = pathArg ? path.resolve(pathArg.split('=')[1]) : cwd;
 
@@ -26,19 +28,47 @@ if (isHelpMode) {
 ⚡ lithium-kb — Fast Structured Markdown Knowledge Base, Neural Graph & MCP
 
 Usage:
-  npx @liulinnuha/lithium-kb init          Auto-configure MCP for Cursor, Claude, Windsurf, Zed, VS Code
-  npx @liulinnuha/lithium-kb               Generate/sync .agent-kb/ and PROJECT_KB.md
+  npx @liulinnuha/lithium-kb init          Auto-detect active agent/IDE & configure MCP/rules safely
+  npx @liulinnuha/lithium-kb               Generate/sync .lithium-kb/ and PROJECT_KB.md
+  npx @liulinnuha/lithium-kb query <terms> Ranked search across knowledge documents
   npx @liulinnuha/lithium-kb --ui          Start real-time Neural Network Web UI
   npx @liulinnuha/lithium-kb --watch       Auto-update knowledge base on file changes
   npx @liulinnuha/lithium-kb --mcp         Start stdio Model Context Protocol (MCP) server
   npx @liulinnuha/lithium-kb uninstall     Remove MCP configs & legacy agent-kb references
-  npx @liulinnuha/lithium-kb uninstall --purge   Remove MCP configs AND project .agent-kb/ + PROJECT_KB.md
+  npx @liulinnuha/lithium-kb uninstall --purge   Remove MCP configs AND project .lithium-kb/ + PROJECT_KB.md
 
 Options:
   --port=<num>                             Port for Web UI (default: 3030)
-  --purge, --all                           Clean local .agent-kb files during uninstall
+  --purge, --all                           Clean local .lithium-kb files during uninstall
   --help, -h                               Show this help message
 `);
+  process.exit(0);
+}
+
+if (isQueryMode) {
+  let queryText = '';
+  const qArg = args[queryIdx];
+  if (qArg.startsWith('--query=')) {
+    queryText = qArg.split('=')[1] || '';
+  } else {
+    queryText = args.slice(queryIdx + 1).filter(a => !a.startsWith('-')).join(' ');
+  }
+
+  if (!queryText.trim()) {
+    console.log(`ℹ Please provide a search query. Example: npx @liulinnuha/lithium-kb query "architecture overview"`);
+    process.exit(1);
+  }
+
+  const results = searchKnowledgeBase(cwd, queryText, { limit: 5 });
+  if (results.length === 0) {
+    console.log(`ℹ No matching documents found for: "${queryText}"`);
+  } else {
+    console.log(`🔍 Found ${results.length} relevant knowledge doc(s) for "${queryText}":\n`);
+    for (const r of results) {
+      console.log(`📄 [${r.category}] ${r.title} (${r.relPath}) — Score: ${r.score}`);
+      console.log(`   ${r.snippet.replace(/\n+/g, ' ')}\n`);
+    }
+  }
   process.exit(0);
 }
 
@@ -80,21 +110,43 @@ if (isInitMode) {
   if (res.isHomeDir) {
     console.log(`ℹ Detected home/root directory (~): Skipped local knowledge base creation.`);
   } else {
-    if (res.kbInitialized) {
-      console.log(`✔ Initialized structured knowledge base (.agent-kb/ & PROJECT_KB.md)`);
+    if (res.detectedAgents && res.detectedAgents.length > 0) {
+      console.log(`✔ Detected agent/IDE environment: ${res.detectedAgents.join(', ')}`);
+    } else {
+      console.log(`ℹ No specific agent/IDE detected; configured universal agent directives.`);
     }
-    if (res.agentRulesCreated) {
-      console.log(`✔ Created .agentrules (Agent navigation directives)`);
+
+    if (res.kbInitialized) {
+      console.log(`✔ Initialized structured knowledge base (.lithium-kb/)`);
+    }
+
+    if (res.createdFiles && res.createdFiles.length > 0) {
+      console.log(`✔ Created files:`);
+      for (const f of res.createdFiles) {
+        console.log(`  • ${f}`);
+      }
+    }
+
+    if (res.preservedFiles && res.preservedFiles.length > 0) {
+      console.log(`ℹ Preserved existing files (not overwritten):`);
+      for (const f of res.preservedFiles) {
+        console.log(`  • ${f}`);
+      }
     }
   }
 
   if (res.configuredTargets.length > 0) {
-    console.log(`\n✔ Configured MCP for detected editors & agents:`);
+    console.log(`\n✔ Configured MCP for detected targets:`);
     for (const target of res.configuredTargets) {
       console.log(`  • ${target.name}: ${target.path}`);
     }
-  } else if (!res.isHomeDir) {
-    console.log(`\n✔ Configured project-level MCP: .cursor/mcp.json`);
+  }
+
+  if (res.errors && res.errors.length > 0) {
+    console.log(`\n⚠ Warnings / Errors:`);
+    for (const err of res.errors) {
+      console.log(`  • ${err}`);
+    }
   }
 
   console.log(`\n🚀 Setup complete! Your coding agents and editors can now interact with lithium-kb via MCP.`);

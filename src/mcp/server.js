@@ -1,10 +1,22 @@
 import readline from 'node:readline';
 import fs from 'node:fs';
 import path from 'node:path';
-import { generateMarkdownKB, resolveKbDirectory } from '../core/generator.js';
+import { generateMarkdownKB, resolveKbDirectory, scanStructuredKnowledgeDocs, searchKnowledgeBase } from '../core/generator.js';
 import { scanTree, extractKeySymbols } from '../core/scanner.js';
-import { KB_DIR_NAME } from '../core/constants.js';
+import { KB_DIR_NAME, KB_CATEGORIES } from '../core/constants.js';
 import { globalSseBroker } from '../server/sse.js';
+
+function notifyEvent(event) {
+  globalSseBroker.broadcast(event);
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3030;
+  try {
+    fetch(`http://127.0.0.1:${port}/api/access`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(event)
+    }).catch(() => {});
+  } catch {}
+}
 
 /**
  * Starts stdio Model Context Protocol (JSON-RPC 2.0) Server.
@@ -29,10 +41,53 @@ export function startMcpServer(cwd) {
           id,
           result: {
             protocolVersion: '2024-11-05',
-            serverInfo: { name: 'lithium-kb', version: '1.1.0' },
-            capabilities: { tools: {} }
+            serverInfo: { name: 'lithium-kb', version: '1.2.5' },
+            capabilities: { tools: {}, resources: {} }
           }
         });
+      } else if (method === 'resources/list') {
+        const docs = scanStructuredKnowledgeDocs(cwd);
+        const resources = [];
+        for (const cat of KB_CATEGORIES) {
+          for (const doc of docs[cat] || []) {
+            resources.push({
+              uri: `lithium-kb://${doc.category}/${doc.filename}`,
+              name: `${doc.category}/${doc.filename}`,
+              description: doc.title || `${doc.category}/${doc.filename}`,
+              mimeType: 'text/markdown'
+            });
+          }
+        }
+        sendJsonRpc({
+          jsonrpc: '2.0',
+          id,
+          result: { resources }
+        });
+      } else if (method === 'resources/read') {
+        const uri = params?.uri || '';
+        const match = uri.replace(/^lithium-kb:\/\//, '').split('/');
+        const category = match[0];
+        const filename = match.slice(1).join('/');
+        const docPath = KB_CATEGORIES.includes(category) && filename
+          ? path.join(resolveKbDirectory(cwd), category, path.basename(filename))
+          : null;
+
+        if (docPath && fs.existsSync(docPath)) {
+          const content = fs.readFileSync(docPath, 'utf8');
+          sendJsonRpc({
+            jsonrpc: '2.0',
+            id,
+            result: {
+              contents: [{ uri, mimeType: 'text/markdown', text: content }]
+            }
+          });
+        } else {
+          sendJsonRpc({
+            jsonrpc: '2.0',
+            id,
+            error: { code: -32602, message: `Resource not found: ${uri}` }
+          });
+        }
       } else if (method === 'tools/list') {
         sendJsonRpc({
           jsonrpc: '2.0',
@@ -43,6 +98,16 @@ export function startMcpServer(cwd) {
                 name: 'get_project_memory',
                 description: 'Get concise architecture, stack, directory map, and entry points of the project to save tokens.',
                 inputSchema: { type: 'object', properties: {} }
+              },
+              {
+                name: 'list_knowledge_docs',
+                description: 'List all documents in a knowledge base category.',
+                inputSchema: {
+                  type: 'object',
+                  properties: {
+                    category: { type: 'string', enum: ['architecture', 'debug', 'tasks', 'features'] }
+                  }
+                }
               },
               {
                 name: 'read_knowledge_doc',
@@ -70,6 +135,18 @@ export function startMcpServer(cwd) {
                 }
               },
               {
+                name: 'search_knowledge_base',
+                description: 'Ranked search across structured knowledge base documents returning matching snippets, categories, and titles.',
+                inputSchema: {
+                  type: 'object',
+                  properties: {
+                    query: { type: 'string', description: 'Search query' },
+                    category: { type: 'string', enum: ['architecture', 'debug', 'tasks', 'features'] }
+                  },
+                  required: ['query']
+                }
+              },
+              {
                 name: 'query_symbol_map',
                 description: 'Lookup exported functions, classes, and types for files.',
                 inputSchema: { type: 'object', properties: { filePattern: { type: 'string' } } }
@@ -85,7 +162,7 @@ export function startMcpServer(cwd) {
           const safeCategory = ['architecture', 'debug', 'tasks', 'features'].includes(args.category) ? args.category : 'architecture';
           const dir = path.join(resolveKbDirectory(cwd), safeCategory);
           const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => f.endsWith('.md')) : [];
-          globalSseBroker.broadcast({
+          notifyEvent({
             id: Date.now(),
             nodeId: `list-${safeCategory}`,
             label: `${safeCategory}/`,
@@ -101,7 +178,7 @@ export function startMcpServer(cwd) {
           });
         } else if (toolName === 'get_project_memory') {
           const data = generateMarkdownKB(cwd);
-          globalSseBroker.broadcast({
+          notifyEvent({
             id: Date.now(),
             nodeId: 'node-root',
             label: 'Agent Core Memory',
@@ -123,7 +200,7 @@ export function startMcpServer(cwd) {
           const docPath = path.join(resolveKbDirectory(cwd), safeCategory, safeFilename);
           if (fs.existsSync(docPath)) {
             const content = fs.readFileSync(docPath, 'utf8');
-            globalSseBroker.broadcast({
+            notifyEvent({
               id: Date.now(),
               nodeId: `doc-${safeCategory.slice(0, 4)}-${safeFilename}`,
               label: `${safeCategory}/${safeFilename}`,
@@ -141,7 +218,7 @@ export function startMcpServer(cwd) {
             sendJsonRpc({
               jsonrpc: '2.0',
               id,
-              error: { code: -32602, message: `Document not found: ${safeCategory}/${safeFilename}` }
+              result: { isError: true, content: [{ type: 'text', text: `Document not found: ${safeCategory}/${safeFilename}` }] }
             });
           }
         } else if (toolName === 'write_knowledge_doc') {
@@ -152,7 +229,7 @@ export function startMcpServer(cwd) {
           const docPath = path.join(targetDir, safeFilename);
           fs.writeFileSync(docPath, args.content || '', 'utf8');
           generateMarkdownKB(cwd);
-          globalSseBroker.broadcast({
+          notifyEvent({
             id: Date.now(),
             nodeId: `cat-${safeCategory}`,
             label: `${safeCategory}/${safeFilename}`,
@@ -166,12 +243,31 @@ export function startMcpServer(cwd) {
             id,
             result: { content: [{ type: 'text', text: `Successfully saved ${safeCategory}/${safeFilename}` }] }
           });
+        } else if (toolName === 'search_knowledge_base') {
+          const query = args.query || '';
+          const results = searchKnowledgeBase(cwd, query, { category: args.category, limit: 6 });
+          notifyEvent({
+            id: Date.now(),
+            nodeId: 'node-root',
+            label: 'Search Knowledge Base',
+            query: `Search: ${query}`,
+            agent: 'MCP Coding Agent',
+            time: new Date().toLocaleTimeString(),
+            tokensSaved: 1250
+          });
+          sendJsonRpc({
+            jsonrpc: '2.0',
+            id,
+            result: {
+              content: [{ type: 'text', text: JSON.stringify(results, null, 2) }]
+            }
+          });
         } else if (toolName === 'query_symbol_map') {
           const items = scanTree(cwd, cwd);
           const files = items.filter(i => i.type === 'file');
           const symbols = extractKeySymbols(cwd, files);
           const filtered = args.filePattern ? symbols.filter(s => s.file.includes(args.filePattern)) : symbols;
-          globalSseBroker.broadcast({
+          notifyEvent({
             id: Date.now(),
             nodeId: 'cat-code',
             label: 'Codebase Symbols',

@@ -38,38 +38,42 @@ export function ensureKnowledgeBaseStructure(cwd) {
     }
   }
 
-  // Create starter docs only if directory is empty
+  // Create starter docs only if directory is empty and file doesn't exist
+  const archFile = path.join(kbRoot, 'architecture', 'overview.md');
   const archDir = path.join(kbRoot, 'architecture');
-  if (fs.readdirSync(archDir).length === 0) {
+  if (fs.readdirSync(archDir).length === 0 && !fs.existsSync(archFile)) {
     fs.writeFileSync(
-      path.join(archDir, 'overview.md'),
+      archFile,
       `# Architecture Overview\n\n- **Project:** ${path.basename(cwd)}\n- **Role:** High-level system structure, entrypoints, and communication contracts.\n`,
       'utf8'
     );
   }
 
+  const taskFile = path.join(kbRoot, 'tasks', 'initial-setup.md');
   const taskDir = path.join(kbRoot, 'tasks');
-  if (fs.readdirSync(taskDir).length === 0) {
+  if (fs.readdirSync(taskDir).length === 0 && !fs.existsSync(taskFile)) {
     fs.writeFileSync(
-      path.join(taskDir, 'initial-setup.md'),
+      taskFile,
       `# Initial Project Setup\n\n- **Status:** Complete\n- **Goal:** Initialize project structure and baseline modules.\n`,
       'utf8'
     );
   }
 
+  const debugFile = path.join(kbRoot, 'debug', 'quickstart-diagnostics.md');
   const debugDir = path.join(kbRoot, 'debug');
-  if (fs.readdirSync(debugDir).length === 0) {
+  if (fs.readdirSync(debugDir).length === 0 && !fs.existsSync(debugFile)) {
     fs.writeFileSync(
-      path.join(debugDir, 'quickstart-diagnostics.md'),
-      `# Quickstart Diagnostics\n\n- **Issue:** Token bloat during multi-file repository exploration.\n- **Resolution:** Route agents to in-memory .agent-kb/ directory map.\n`,
+      debugFile,
+      `# Quickstart Diagnostics\n\n- **Issue:** Token bloat during multi-file repository exploration.\n- **Resolution:** Route agents to in-memory .lithium-kb/ directory map.\n`,
       'utf8'
     );
   }
 
+  const featFile = path.join(kbRoot, 'features', 'core-specs.md');
   const featDir = path.join(kbRoot, 'features');
-  if (fs.readdirSync(featDir).length === 0) {
+  if (fs.readdirSync(featDir).length === 0 && !fs.existsSync(featFile)) {
     fs.writeFileSync(
-      path.join(featDir, 'core-specs.md'),
+      featFile,
       `# Core Feature Specifications\n\n- **Status:** Active\n- **Description:** Core requirements and user workflows.\n`,
       'utf8'
     );
@@ -162,7 +166,106 @@ export function buildNeuralGraphData(cwd) {
     links.push({ source: 'cat-code', target: id });
   }
 
+  // Add associative cross-links from markdown content references
+  const linkSet = new Set(links.map(l => `${l.source}->${l.target}`));
+  for (const [cat, config] of Object.entries(categoryMap)) {
+    for (const doc of docs[cat] || []) {
+      const sourceId = `${config.prefix}-${doc.filename}`;
+      const linkRegex = /\[.*?\]\((.*?)\)|`([a-zA-Z0-9_\-\.\/]+\.[a-zA-Z0-9]+)`/g;
+      let match;
+      while ((match = linkRegex.exec(doc.content)) !== null) {
+        const targetRef = (match[1] || match[2] || '').trim();
+        if (!targetRef) continue;
+        const baseName = path.basename(targetRef);
+        for (const node of nodes) {
+          if (node.id !== sourceId && (node.path === targetRef || node.label === baseName || node.label === targetRef)) {
+            const linkKey = `${sourceId}->${node.id}`;
+            if (!linkSet.has(linkKey)) {
+              linkSet.add(linkKey);
+              links.push({ source: sourceId, target: node.id });
+            }
+          }
+        }
+      }
+    }
+  }
+
   return { nodes, links };
+}
+
+/**
+ * Ranked search across structured markdown files.
+ * @param {string} cwd
+ * @param {string} query
+ * @param {object} [options]
+ * @param {string} [options.category]
+ * @param {number} [options.limit=5]
+ * @returns {Array<{ category: string, filename: string, relPath: string, title: string, score: number, snippet: string }>}
+ */
+export function searchKnowledgeBase(cwd, query, options = {}) {
+  if (!query || typeof query !== 'string' || !query.trim()) return [];
+  const limit = options.limit || 5;
+  const targetCategory = options.category;
+  const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+  if (terms.length === 0) return [];
+
+  const docs = scanStructuredKnowledgeDocs(cwd);
+  const results = [];
+  const categories = targetCategory ? [targetCategory] : KB_CATEGORIES;
+
+  for (const cat of categories) {
+    for (const doc of docs[cat] || []) {
+      let score = 0;
+      const lowerTitle = doc.title.toLowerCase();
+      const lowerFilename = doc.filename.toLowerCase();
+
+      for (const term of terms) {
+        if (lowerTitle.includes(term)) score += 10;
+        if (lowerFilename.includes(term)) score += 8;
+      }
+
+      const sections = doc.content.split(/\n(?=#{1,4}\s)/);
+      let bestSection = '';
+      let bestSectionScore = 0;
+
+      for (const sec of sections) {
+        let secScore = 0;
+        const lowerSec = sec.toLowerCase();
+        const firstLine = lowerSec.split('\n')[0] || '';
+
+        for (const term of terms) {
+          if (firstLine.includes(term)) secScore += 5;
+          const count = lowerSec.split(term).length - 1;
+          secScore += Math.min(count, 5);
+        }
+
+        if (secScore > bestSectionScore) {
+          bestSectionScore = secScore;
+          bestSection = sec.trim();
+        }
+      }
+
+      score += bestSectionScore;
+
+      if (score > 0) {
+        let snippet = bestSection || doc.content.slice(0, 300);
+        if (snippet.length > 300) {
+          snippet = snippet.slice(0, 300) + '...';
+        }
+
+        results.push({
+          category: doc.category,
+          filename: doc.filename,
+          relPath: doc.relPath,
+          title: doc.title,
+          score,
+          snippet
+        });
+      }
+    }
+  }
+
+  return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
 /**

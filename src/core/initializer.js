@@ -7,18 +7,38 @@ import { ensureKnowledgeBaseStructure, generateMarkdownKB } from './generator.js
 const MCP_COMMAND = 'npx';
 const MCP_ARGS = ['-y', '@liulinnuha/lithium-kb', '--mcp'];
 
+const DEFAULT_RULES = `# Agent Navigation & Memory Directives
+1. Zero Blind Crawling: Before crawling files across the repository, read .lithium-kb/ or PROJECT_KB.md.
+2. Mandatory Task & Bug Tracking:
+   - For every task, UI refactor, or feature assigned, create/update .lithium-kb/tasks/<task-name>.md.
+   - For every resolved bug or diagnostic fix, document root cause and solution in .lithium-kb/debug/<issue-name>.md.
+3. Keep Memory Synced: Run 'npx @liulinnuha/lithium-kb' after updating .lithium-kb/ docs.
+4. Deterministic Output: Do not emit dynamic timestamps or session headers in knowledge markdown files.
+`;
+
 /**
- * Safely reads and parses JSON, or returns a default fallback.
+ * Safely reads and parses JSON, or returns undefined on parse failure.
+ * Returns null if file does not exist.
  */
-function readJsonSafe(filePath, fallback = {}) {
+function readJsonSafe(filePath) {
+  if (!fs.existsSync(filePath)) return null;
   try {
-    if (fs.existsSync(filePath)) {
-      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    }
+    const raw = fs.readFileSync(filePath, 'utf8');
+    if (!raw.trim()) return {};
+    return JSON.parse(raw);
   } catch {
-    // Return fallback if corrupted or empty
+    // Try stripping comments and trailing commas before failing
+    try {
+      const raw = fs.readFileSync(filePath, 'utf8');
+      const stripped = raw
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*/g, '')
+        .replace(/,\s*([}\]])/g, '$1');
+      return JSON.parse(stripped);
+    } catch {
+      return undefined; // Parse error on existing file
+    }
   }
-  return fallback;
 }
 
 /**
@@ -43,6 +63,85 @@ export function isHomeOrRootDir(dir) {
 }
 
 /**
+ * Detects the active coding agents, IDEs, and environments.
+ * @param {string} cwd
+ * @returns {Set<string>}
+ */
+export function detectEnvironmentAgents(cwd = process.cwd()) {
+  const detected = new Set();
+  const env = process.env;
+  const term = (env.TERM_PROGRAM || '').toLowerCase();
+
+  // 1. Cursor IDE / Agent
+  if (
+    env.CURSOR_AGENT ||
+    env.CURSOR_VERSION ||
+    env.CURSOR_SERVER_USER_DATA_DIR ||
+    term === 'cursor' ||
+    fs.existsSync(path.join(cwd, '.cursor')) ||
+    fs.existsSync(path.join(cwd, '.cursorrules'))
+  ) {
+    detected.add('cursor');
+  }
+
+  // 2. Claude Code CLI / Claude Desktop
+  if (
+    env.CLAUDE_CODE ||
+    env.CLAUDE_SESSION_ID ||
+    env.CLAUDE_DIR ||
+    env.CLAUDE_AGENT ||
+    fs.existsSync(path.join(cwd, 'CLAUDE.md')) ||
+    fs.existsSync(path.join(cwd, '.claude'))
+  ) {
+    detected.add('claude');
+  }
+
+  // 3. Windsurf / Codeium
+  if (
+    env.WINDSURF_PORTABLE ||
+    env.WINDSURF_VERSION ||
+    term === 'windsurf' ||
+    fs.existsSync(path.join(cwd, '.windsurf')) ||
+    fs.existsSync(path.join(cwd, '.windsurfrules'))
+  ) {
+    detected.add('windsurf');
+  }
+
+  // 4. VS Code (Standard / Cline / Roo Code)
+  if (
+    ((term === 'vscode' || env.VSCODE_PID) && !detected.has('cursor') && !detected.has('windsurf')) ||
+    fs.existsSync(path.join(cwd, '.vscode'))
+  ) {
+    detected.add('vscode');
+  }
+
+  // 5. Zed Editor
+  if (
+    env.ZED_TERM ||
+    env.ZED_SERVER ||
+    term === 'zed' ||
+    fs.existsSync(path.join(cwd, '.zed'))
+  ) {
+    detected.add('zed');
+  }
+
+  // 6. Pi / Coding Agent Harness
+  if (
+    env.PI_SESSION_DIR ||
+    env.PI_AGENT ||
+    env.PI_MODEL ||
+    env.PI_TERMINAL ||
+    fs.existsSync(path.join(cwd, '.agentrules')) ||
+    fs.existsSync(path.join(os.homedir(), '.pi')) ||
+    fs.existsSync(path.join(os.homedir(), '.agents', 'skills'))
+  ) {
+    detected.add('pi');
+  }
+
+  return detected;
+}
+
+/**
  * Returns platform-specific global configuration paths for various editors and agents.
  */
 function getGlobalAgentConfigs() {
@@ -63,6 +162,7 @@ function getGlobalAgentConfigs() {
   }
   configs.push({
     name: 'Claude Desktop',
+    agent: 'claude',
     type: 'mcpServers',
     path: claudeConfigPath,
     global: true
@@ -76,6 +176,7 @@ function getGlobalAgentConfigs() {
   if (windsurfConfigPath) {
     configs.push({
       name: 'Windsurf',
+      agent: 'windsurf',
       type: 'mcpServers',
       path: windsurfConfigPath,
       global: true
@@ -92,6 +193,7 @@ function getGlobalAgentConfigs() {
   if (zedConfigPath) {
     configs.push({
       name: 'Zed Editor',
+      agent: 'zed',
       type: 'zedContextServers',
       path: zedConfigPath,
       global: true
@@ -109,6 +211,7 @@ function getGlobalAgentConfigs() {
   }
   configs.push({
     name: 'Cline (VS Code)',
+    agent: 'vscode',
     type: 'mcpServers',
     path: clineConfigPath,
     global: true
@@ -125,6 +228,7 @@ function getGlobalAgentConfigs() {
   }
   configs.push({
     name: 'Roo Code (VS Code)',
+    agent: 'vscode',
     type: 'mcpServers',
     path: rooConfigPath,
     global: true
@@ -140,24 +244,28 @@ function getProjectAgentConfigs(cwd) {
   return [
     {
       name: 'Cursor',
+      agent: 'cursor',
       type: 'mcpServers',
       path: path.join(cwd, '.cursor', 'mcp.json'),
       global: false
     },
     {
       name: 'Windsurf (Workspace)',
+      agent: 'windsurf',
       type: 'mcpServers',
       path: path.join(cwd, '.windsurf', 'mcp.json'),
       global: false
     },
     {
       name: 'Zed (Workspace)',
+      agent: 'zed',
       type: 'zedContextServers',
       path: path.join(cwd, '.zed', 'settings.json'),
       global: false
     },
     {
       name: 'VS Code (Workspace)',
+      agent: 'vscode',
       type: 'mcpServers',
       path: path.join(cwd, '.vscode', 'mcp.json'),
       global: false
@@ -166,32 +274,60 @@ function getProjectAgentConfigs(cwd) {
 }
 
 /**
- * Injects lithium-kb configuration into an editor config file (and upgrades legacy agent-kb entries).
+ * Injects lithium-kb configuration into an editor config file safely without overwriting other entries.
  */
 function injectMcpConfig(target) {
   try {
-    const data = readJsonSafe(target.path, {});
+    const fileExists = fs.existsSync(target.path);
+    let data = {};
+
+    if (fileExists) {
+      const parsed = readJsonSafe(target.path);
+      if (parsed === undefined) {
+        // Corrupted or unsupported JSON: do NOT overwrite to protect user files
+        return { success: false, reason: `Cannot safely parse ${target.path}; skipped to avoid overwriting.` };
+      }
+      data = parsed || {};
+    }
+
+    let modified = false;
 
     if (target.type === 'zedContextServers') {
       data.context_servers = data.context_servers || {};
-      delete data.context_servers['agent-kb']; // Clean up legacy
-      data.context_servers['lithium-kb'] = {
-        command: MCP_COMMAND,
-        args: MCP_ARGS
-      };
+      if (data.context_servers['agent-kb']) {
+        delete data.context_servers['agent-kb'];
+        modified = true;
+      }
+      const existing = data.context_servers['lithium-kb'];
+      if (!existing || existing.command !== MCP_COMMAND || JSON.stringify(existing.args) !== JSON.stringify(MCP_ARGS)) {
+        data.context_servers['lithium-kb'] = {
+          command: MCP_COMMAND,
+          args: MCP_ARGS
+        };
+        modified = true;
+      }
     } else {
       data.mcpServers = data.mcpServers || {};
-      delete data.mcpServers['agent-kb']; // Clean up legacy
-      data.mcpServers['lithium-kb'] = {
-        command: MCP_COMMAND,
-        args: MCP_ARGS
-      };
+      if (data.mcpServers['agent-kb']) {
+        delete data.mcpServers['agent-kb'];
+        modified = true;
+      }
+      const existing = data.mcpServers['lithium-kb'];
+      if (!existing || existing.command !== MCP_COMMAND || JSON.stringify(existing.args) !== JSON.stringify(MCP_ARGS)) {
+        data.mcpServers['lithium-kb'] = {
+          command: MCP_COMMAND,
+          args: MCP_ARGS
+        };
+        modified = true;
+      }
     }
 
-    writeJsonSafe(target.path, data);
-    return true;
-  } catch {
-    return false;
+    if (modified || !fileExists) {
+      writeJsonSafe(target.path, data);
+    }
+    return { success: true, updated: modified || !fileExists };
+  } catch (err) {
+    return { success: false, reason: err.message };
   }
 }
 
@@ -201,7 +337,8 @@ function injectMcpConfig(target) {
 function removeMcpConfig(target) {
   try {
     if (!fs.existsSync(target.path)) return false;
-    const data = readJsonSafe(target.path, {});
+    const data = readJsonSafe(target.path);
+    if (!data || typeof data !== 'object') return false;
     let modified = false;
 
     if (target.type === 'zedContextServers' && data.context_servers) {
@@ -250,18 +387,21 @@ export function ensureGlobalAgentSkill() {
       ? fs.readFileSync(localSkillPath, 'utf8')
       : `---
 name: lithium-kb
-description: Generates, maintains, and visualizes a structured Markdown knowledge base (.agent-kb/{architecture,debug,tasks,features}) with an interactive Neural Network graph, auto-watch mode, custom agent directives (.agentrules), and MCP server integration for Pi, Claude, Codex, Cursor, and other coding agents. Triggers automatically on tasks, bugs, or when the user mentions "kb", "knowledge base", "sync kb".
+description: Generates, maintains, and visualizes a structured Markdown knowledge base (.lithium-kb/{architecture,debug,tasks,features}) with an interactive Neural Network graph, auto-watch mode, custom agent directives (.agentrules), and MCP server integration for Pi, Claude, Codex, Cursor, and other coding agents. Triggers automatically on tasks, bugs, or when the user mentions "kb", "knowledge base", "sync kb".
 ---
 
 # Structured Agent Knowledge Base (lithium-kb)
 
 When assigned a task or bug fix:
-1. Consult .agent-kb/ or PROJECT_KB.md before crawling files.
-2. Record task updates in .agent-kb/tasks/<name>.md and bug resolutions in .agent-kb/debug/<name>.md.
+1. Consult .lithium-kb/ or PROJECT_KB.md before crawling files.
+2. Record task updates in .lithium-kb/tasks/<name>.md and bug resolutions in .lithium-kb/debug/<name>.md.
 3. Sync global index using 'npx @liulinnuha/lithium-kb'.
 `;
 
-    fs.writeFileSync(path.join(globalSkillDir, 'SKILL.md'), skillContent, 'utf8');
+    const targetSkillFile = path.join(globalSkillDir, 'SKILL.md');
+    if (!fs.existsSync(targetSkillFile)) {
+      fs.writeFileSync(targetSkillFile, skillContent, 'utf8');
+    }
     return true;
   } catch {
     return false;
@@ -311,40 +451,38 @@ export function uninstallProject(cwd = process.cwd(), cleanFiles = false) {
     }
   }
 
-  // 2. Clean files (handles both project directories and accidental files in $HOME)
+  // 2. Clean files if requested
   if (cleanFiles) {
-    if (cleanFiles) {
-      const kbDir = path.join(cwd, '.lithium-kb');
-      const legacyKbDir = path.join(cwd, '.agent-kb');
-      const projectKb = path.join(cwd, 'PROJECT_KB.md');
-      const ruleFiles = ['.agentrules', '.cursorrules', 'CLAUDE.md', '.windsurfrules'];
+    const kbDir = path.join(cwd, '.lithium-kb');
+    const legacyKbDir = path.join(cwd, '.agent-kb');
+    const projectKb = path.join(cwd, 'PROJECT_KB.md');
+    const ruleFiles = ['.agentrules', '.cursorrules', 'CLAUDE.md', '.windsurfrules'];
 
-      if (fs.existsSync(kbDir)) {
+    if (fs.existsSync(kbDir)) {
+      try {
+        fs.rmSync(kbDir, { recursive: true, force: true });
+        results.removedFiles.push(kbDir);
+      } catch {}
+    }
+    if (fs.existsSync(legacyKbDir)) {
+      try {
+        fs.rmSync(legacyKbDir, { recursive: true, force: true });
+        results.removedFiles.push(legacyKbDir);
+      } catch {}
+    }
+    if (fs.existsSync(projectKb)) {
+      try {
+        fs.unlinkSync(projectKb);
+        results.removedFiles.push(projectKb);
+      } catch {}
+    }
+    for (const rf of ruleFiles) {
+      const fullRf = path.join(cwd, rf);
+      if (fs.existsSync(fullRf)) {
         try {
-          fs.rmSync(kbDir, { recursive: true, force: true });
-          results.removedFiles.push(kbDir);
+          fs.unlinkSync(fullRf);
+          results.removedFiles.push(fullRf);
         } catch {}
-      }
-      if (fs.existsSync(legacyKbDir)) {
-        try {
-          fs.rmSync(legacyKbDir, { recursive: true, force: true });
-          results.removedFiles.push(legacyKbDir);
-        } catch {}
-      }
-      if (fs.existsSync(projectKb)) {
-        try {
-          fs.unlinkSync(projectKb);
-          results.removedFiles.push(projectKb);
-        } catch {}
-      }
-      for (const rf of ruleFiles) {
-        const fullRf = path.join(cwd, rf);
-        if (fs.existsSync(fullRf)) {
-          try {
-            fs.unlinkSync(fullRf);
-            results.removedFiles.push(fullRf);
-          } catch {}
-        }
       }
     }
   }
@@ -364,7 +502,31 @@ export function uninstallProject(cwd = process.cwd(), cleanFiles = false) {
 }
 
 /**
- * Runs one-click agent setup across project workspace & detected editors.
+ * Safely writes a rule file only if it doesn't already exist.
+ * @param {string} filePath
+ * @param {string} content
+ * @param {object} results
+ */
+function safelyCreateRuleFile(filePath, content, results) {
+  const relName = path.basename(filePath);
+  if (fs.existsSync(filePath)) {
+    results.preservedFiles.push(relName);
+  } else {
+    try {
+      fs.writeFileSync(filePath, content, 'utf8');
+      results.createdFiles.push(relName);
+      if (relName === '.agentrules') {
+        results.agentRulesCreated = true;
+      }
+    } catch (err) {
+      results.errors.push(`Failed to create ${relName}: ${err.message}`);
+    }
+  }
+}
+
+/**
+ * Runs adaptive agent setup targeted specifically to the user's detected active editor/agent.
+ * Never overwrites existing user files.
  */
 export function initializeProject(cwd = process.cwd()) {
   const isHome = isHomeOrRootDir(cwd);
@@ -373,90 +535,163 @@ export function initializeProject(cwd = process.cwd()) {
     isHomeDir: isHome,
     kbInitialized: false,
     agentRulesCreated: false,
+    detectedAgents: [],
+    createdFiles: [],
+    preservedFiles: [],
     configuredTargets: [],
     errors: []
   };
 
   // If run in HOME or ROOT, skip creating project knowledge files
-  if (!isHome) {
-    // 1. Initialize .agent-kb/ and PROJECT_KB.md
-    try {
-      ensureKnowledgeBaseStructure(cwd);
-      generateMarkdownKB(cwd);
-      results.kbInitialized = true;
-    } catch (err) {
-      results.errors.push(`Failed to initialize knowledge structure: ${err.message}`);
+  if (isHome) {
+    return results;
+  }
+
+  // 1. Initialize structured knowledge base directory and starter files (without overwriting)
+  try {
+    ensureKnowledgeBaseStructure(cwd);
+    results.kbInitialized = true;
+
+    const projectKbPath = path.join(cwd, 'PROJECT_KB.md');
+    if (fs.existsSync(projectKbPath)) {
+      results.preservedFiles.push('PROJECT_KB.md');
+      generateMarkdownKB(cwd, false);
+    } else {
+      generateMarkdownKB(cwd, true);
+      results.createdFiles.push('PROJECT_KB.md');
+    }
+  } catch (err) {
+    results.errors.push(`Failed to initialize knowledge structure: ${err.message}`);
+  }
+
+  // 2. Detect active agent & IDE environments
+  const detected = detectEnvironmentAgents(cwd);
+  results.detectedAgents = Array.from(detected);
+
+  // 3. Adapt rule files and workspace MCP to detected environments
+  if (detected.size === 0) {
+    // Universal fallback: create standard .agentrules without cluttering editor-specific folders
+    safelyCreateRuleFile(path.join(cwd, '.agentrules'), DEFAULT_RULES, results);
+  } else {
+    // 3a. Cursor
+    if (detected.has('cursor')) {
+      safelyCreateRuleFile(path.join(cwd, '.cursorrules'), DEFAULT_RULES, results);
+      const cursorTarget = {
+        name: 'Cursor',
+        agent: 'cursor',
+        type: 'mcpServers',
+        path: path.join(cwd, '.cursor', 'mcp.json'),
+        global: false
+      };
+      const inj = injectMcpConfig(cursorTarget);
+      if (inj.success) {
+        results.configuredTargets.push(cursorTarget);
+      } else if (inj.reason) {
+        results.errors.push(inj.reason);
+      }
     }
 
-    // 2. Create agent rules for Pi, Cursor, Claude Code, and Windsurf
-    try {
-      const defaultRules = `# Agent Navigation & Memory Directives
-1. Zero Blind Crawling: Before crawling files across the repository, read .lithium-kb/ or PROJECT_KB.md.
-2. Mandatory Task & Bug Tracking:
-   - For every task, UI refactor, or feature assigned, create/update .lithium-kb/tasks/<task-name>.md.
-   - For every resolved bug or diagnostic fix, document root cause and solution in .lithium-kb/debug/<issue-name>.md.
-3. Keep Memory Synced: Run 'npx @liulinnuha/lithium-kb' after updating .lithium-kb/ docs.
-4. Deterministic Output: Do not emit dynamic timestamps or session headers in knowledge markdown files.
-`;
-
-      // a) .agentrules (Pi Agent, standard coding agents)
-      const agentRulesPath = path.join(cwd, '.agentrules');
-      if (!fs.existsSync(agentRulesPath)) {
-        fs.writeFileSync(agentRulesPath, defaultRules, 'utf8');
-        results.agentRulesCreated = true;
-      }
-
-      // b) .cursorrules (Cursor IDE)
-      const cursorRulesPath = path.join(cwd, '.cursorrules');
-      if (!fs.existsSync(cursorRulesPath)) {
-        fs.writeFileSync(cursorRulesPath, defaultRules, 'utf8');
-      }
-
-      // c) CLAUDE.md (Claude Code CLI)
-      const claudeRulesPath = path.join(cwd, 'CLAUDE.md');
-      if (!fs.existsSync(claudeRulesPath)) {
-        fs.writeFileSync(claudeRulesPath, defaultRules, 'utf8');
-      }
-
-      // d) .windsurfrules (Windsurf / Cascade)
-      const windsurfRulesPath = path.join(cwd, '.windsurfrules');
-      if (!fs.existsSync(windsurfRulesPath)) {
-        fs.writeFileSync(windsurfRulesPath, defaultRules, 'utf8');
-      }
-    } catch (err) {
-      results.errors.push(`Failed to write agent rules: ${err.message}`);
-    }
-
-    // 3. Configure Project-Level MCP (Cursor)
-    const projectConfigs = getProjectAgentConfigs(cwd);
-    for (const cfg of projectConfigs) {
-      if (cfg.name === 'Cursor') {
-        if (injectMcpConfig(cfg)) {
-          results.configuredTargets.push(cfg);
+    // 3b. Claude Code CLI / Claude Desktop
+    if (detected.has('claude')) {
+      safelyCreateRuleFile(path.join(cwd, 'CLAUDE.md'), DEFAULT_RULES, results);
+      const globalConfigs = getGlobalAgentConfigs();
+      for (const cfg of globalConfigs) {
+        if (cfg.agent === 'claude' && (fs.existsSync(cfg.path) || fs.existsSync(path.dirname(cfg.path)))) {
+          const inj = injectMcpConfig(cfg);
+          if (inj.success) results.configuredTargets.push(cfg);
         }
       }
     }
-  }
 
-  // 4. Detect and configure existing global editors/agents
-  const globalConfigs = getGlobalAgentConfigs();
-  for (const cfg of globalConfigs) {
-    const parentDir = path.dirname(cfg.path);
-    if (fs.existsSync(parentDir) || fs.existsSync(cfg.path)) {
-      if (injectMcpConfig(cfg)) {
-        results.configuredTargets.push(cfg);
+    // 3c. Windsurf
+    if (detected.has('windsurf')) {
+      safelyCreateRuleFile(path.join(cwd, '.windsurfrules'), DEFAULT_RULES, results);
+      const wsTarget = {
+        name: 'Windsurf (Workspace)',
+        agent: 'windsurf',
+        type: 'mcpServers',
+        path: path.join(cwd, '.windsurf', 'mcp.json'),
+        global: false
+      };
+      if (fs.existsSync(path.join(cwd, '.windsurf')) || process.env.TERM_PROGRAM === 'windsurf') {
+        const inj = injectMcpConfig(wsTarget);
+        if (inj.success) results.configuredTargets.push(wsTarget);
+      }
+      const globalConfigs = getGlobalAgentConfigs();
+      for (const cfg of globalConfigs) {
+        if (cfg.agent === 'windsurf' && (fs.existsSync(cfg.path) || fs.existsSync(path.dirname(cfg.path)))) {
+          const inj = injectMcpConfig(cfg);
+          if (inj.success) results.configuredTargets.push(cfg);
+        }
       }
     }
-  }
 
-  // 5. Ensure global Pi / Claude agent skill is registered
-  if (ensureGlobalAgentSkill()) {
-    results.configuredTargets.push({
-      name: 'Pi Agent Skill (~/.agents/skills/lithium-kb)',
-      type: 'skill',
-      path: path.join(os.homedir(), '.agents', 'skills', 'lithium-kb', 'SKILL.md'),
-      global: true
-    });
+    // 3d. VS Code
+    if (detected.has('vscode')) {
+      const vscodeTarget = {
+        name: 'VS Code (Workspace)',
+        agent: 'vscode',
+        type: 'mcpServers',
+        path: path.join(cwd, '.vscode', 'mcp.json'),
+        global: false
+      };
+      const inj = injectMcpConfig(vscodeTarget);
+      if (inj.success) results.configuredTargets.push(vscodeTarget);
+
+      // Check global Cline / Roo Code extensions
+      const globalConfigs = getGlobalAgentConfigs();
+      for (const cfg of globalConfigs) {
+        if (cfg.agent === 'vscode' && (fs.existsSync(cfg.path) || fs.existsSync(path.dirname(cfg.path)))) {
+          const ginj = injectMcpConfig(cfg);
+          if (ginj.success) results.configuredTargets.push(cfg);
+        }
+      }
+
+      // If no rule file exists at all in workspace, create .agentrules
+      if (
+        !fs.existsSync(path.join(cwd, '.agentrules')) &&
+        !fs.existsSync(path.join(cwd, '.cursorrules')) &&
+        !fs.existsSync(path.join(cwd, 'CLAUDE.md')) &&
+        !fs.existsSync(path.join(cwd, '.windsurfrules'))
+      ) {
+        safelyCreateRuleFile(path.join(cwd, '.agentrules'), DEFAULT_RULES, results);
+      }
+    }
+
+    // 3e. Zed
+    if (detected.has('zed')) {
+      const zedTarget = {
+        name: 'Zed (Workspace)',
+        agent: 'zed',
+        type: 'zedContextServers',
+        path: path.join(cwd, '.zed', 'settings.json'),
+        global: false
+      };
+      if (fs.existsSync(path.join(cwd, '.zed')) || process.env.TERM_PROGRAM === 'zed') {
+        const inj = injectMcpConfig(zedTarget);
+        if (inj.success) results.configuredTargets.push(zedTarget);
+      }
+      const globalConfigs = getGlobalAgentConfigs();
+      for (const cfg of globalConfigs) {
+        if (cfg.agent === 'zed' && (fs.existsSync(cfg.path) || fs.existsSync(path.dirname(cfg.path)))) {
+          const inj = injectMcpConfig(cfg);
+          if (inj.success) results.configuredTargets.push(cfg);
+        }
+      }
+    }
+
+    // 3f. Pi
+    if (detected.has('pi')) {
+      safelyCreateRuleFile(path.join(cwd, '.agentrules'), DEFAULT_RULES, results);
+      if (ensureGlobalAgentSkill()) {
+        results.configuredTargets.push({
+          name: 'Pi Agent Skill (~/.agents/skills/lithium-kb)',
+          type: 'skill',
+          path: path.join(os.homedir(), '.agents', 'skills', 'lithium-kb', 'SKILL.md'),
+          global: true
+        });
+      }
+    }
   }
 
   return results;

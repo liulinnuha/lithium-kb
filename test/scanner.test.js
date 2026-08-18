@@ -25,7 +25,7 @@ test('scanner: getPackageScripts extracts package name and scripts', () => {
   assert.ok(pkg.scripts.generate);
 });
 
-test('scanner: getIgnoredSet defaults include node_modules and .git', () => {
+test('scanner: getIgnoredSet defaults include node_modules and .git, and reads .gitignore', () => {
   const ignored = getIgnoredSet(projectRoot);
   assert.ok(ignored.has('node_modules'));
   assert.ok(ignored.has('.git'));

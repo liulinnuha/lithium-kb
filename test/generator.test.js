@@ -7,7 +7,8 @@ import {
   ensureKnowledgeBaseStructure,
   scanStructuredKnowledgeDocs,
   buildNeuralGraphData,
-  generateMarkdownKB
+  generateMarkdownKB,
+  searchKnowledgeBase
 } from '../src/core/generator.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -37,9 +38,10 @@ test('generator: buildNeuralGraphData generates nodes and links', () => {
   assert.ok(graph.nodes.some(n => n.id === 'cat-tasks'));
 });
 
-test('generator: generateMarkdownKB creates PROJECT_KB.md', () => {
-  const result = generateMarkdownKB(projectRoot);
-  assert.ok(result.markdown);
-  assert.ok(result.markdown.includes('# Project Knowledge Base'));
-  assert.ok(fs.existsSync(path.join(projectRoot, 'PROJECT_KB.md')));
+test('generator: searchKnowledgeBase ranks matching documents by score', () => {
+  const results = searchKnowledgeBase(projectRoot, 'architecture overview');
+  assert.ok(results.length > 0);
+  assert.equal(results[0].category, 'architecture');
+  assert.ok(results[0].score > 0);
+  assert.ok(results[0].snippet);
 });

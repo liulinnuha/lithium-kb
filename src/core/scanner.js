@@ -3,21 +3,27 @@ import path from 'node:path';
 import { DEFAULT_IGNORED_DIRS, MAX_DEPTH, MAX_SAMPLE_FILES, KB_DIR_NAME } from './constants.js';
 
 /**
- * Loads user ignore patterns from .agentignore if present.
+ * Loads user ignore patterns from .agentignore and .gitignore if present.
  * @param {string} cwd
  * @returns {Set<string>}
  */
 export function getIgnoredSet(cwd) {
   const set = new Set(DEFAULT_IGNORED_DIRS);
-  const ignoreFile = path.join(cwd, '.agentignore');
-  if (fs.existsSync(ignoreFile)) {
-    try {
-      const lines = fs.readFileSync(ignoreFile, 'utf8').split('\n');
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed && !trimmed.startsWith('#')) set.add(trimmed);
-      }
-    } catch {}
+  const candidates = ['.agentignore', '.gitignore'];
+  for (const file of candidates) {
+    const filePath = path.join(cwd, file);
+    if (fs.existsSync(filePath)) {
+      try {
+        const lines = fs.readFileSync(filePath, 'utf8').split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed && !trimmed.startsWith('#') && !trimmed.startsWith('!')) {
+            const normalized = trimmed.replace(/^\/+|\/+$/g, '');
+            if (normalized) set.add(normalized);
+          }
+        }
+      } catch {}
+    }
   }
   return set;
 }
