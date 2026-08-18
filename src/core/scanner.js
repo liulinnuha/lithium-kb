@@ -130,14 +130,14 @@ export function scanTree(dir, rootDir, depth = 0, summary = [], ignoredSet = nul
 }
 
 /**
- * Extracts exported functions, classes, interfaces, and signatures.
+ * Extracts exported functions, classes, interfaces, and signatures across polyglot codebases.
  * @param {string} cwd
  * @param {Array} files
  * @returns {Array}
  */
 export function extractKeySymbols(cwd, files) {
   const symbols = [];
-  const codeFiles = files.filter(f => /\.(ts|js|py|go|rs)$/.test(f.path) && !f.path.startsWith(KB_DIR_NAME)).slice(0, MAX_SAMPLE_FILES);
+  const codeFiles = files.filter(f => /\.(ts|tsx|js|jsx|py|go|rs|rb|php|java|kt)$/.test(f.path) && !f.path.startsWith(KB_DIR_NAME)).slice(0, MAX_SAMPLE_FILES);
 
   for (const f of codeFiles) {
     try {
@@ -149,11 +149,11 @@ export function extractKeySymbols(cwd, files) {
         const trimmed = line.trim();
         if (trimmed.startsWith('export ') || trimmed.startsWith('export default ')) {
           exports.push(trimmed.replace(/^export (default )?/, '').slice(0, 80));
-        } else if (/^(def |class )/.test(trimmed)) {
+        } else if (/^(def |async def |class )/.test(trimmed)) {
           exports.push(trimmed.slice(0, 80));
-        } else if (/^(func |type )/.test(trimmed)) {
+        } else if (/^(func |type )/.test(trimmed) || /^func\s*\([^)]+\)\s*[A-Z]/.test(trimmed)) {
           exports.push(trimmed.slice(0, 80));
-        } else if (trimmed.startsWith('pub ')) {
+        } else if (/^pub(\([^)]+\))?\s+(fn|async fn|struct|enum|trait|type|const)/.test(trimmed) || trimmed.startsWith('pub ')) {
           exports.push(trimmed.slice(0, 80));
         }
         if (exports.length >= 6) break;

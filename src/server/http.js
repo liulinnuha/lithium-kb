@@ -2,7 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { generateMarkdownKB, buildNeuralGraphData } from '../core/generator.js';
+import { generateMarkdownKB, buildNeuralGraphData, searchKnowledgeBase } from '../core/generator.js';
 import { globalSseBroker } from './sse.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -74,6 +74,12 @@ export function startServer(cwd, port = 3030) {
       const graph = buildNeuralGraphData(cwd);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(graph));
+    } else if (pathname === '/api/search' && req.method === 'GET') {
+      const q = url.searchParams.get('q') || '';
+      const category = url.searchParams.get('category') || undefined;
+      const results = searchKnowledgeBase(cwd, q, { category, limit: 10 });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ query: q, count: results.length, results }));
     } else if (pathname === '/api/events' && req.method === 'GET') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(globalSseBroker.getHistory()));

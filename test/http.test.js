@@ -28,7 +28,14 @@ test('http: starts server and serves HTML UI and REST endpoints', async () => {
     assert.ok(kbData.rootName.includes('lithium-kb'));
     assert.ok(kbData.graph.nodes.length > 0);
 
-    // 3. Test POST /api/access
+    // 3. Test GET /api/search
+    const searchRes = await fetch(`http://localhost:${TEST_PORT}/api/search?q=architecture`);
+    assert.equal(searchRes.status, 200);
+    const searchData = await searchRes.json();
+    assert.ok(searchData.results.length > 0);
+    assert.equal(searchData.results[0].category, 'architecture');
+
+    // 4. Test POST /api/access
     const postRes = await fetch(`http://localhost:${TEST_PORT}/api/access`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
