@@ -4,10 +4,8 @@ import path from 'node:path';
 import { generateMarkdownKB, resolveKbDirectory, scanStructuredKnowledgeDocs, searchKnowledgeBase } from '../core/generator.js';
 import { scanTree, extractKeySymbols } from '../core/scanner.js';
 import { KB_DIR_NAME, KB_CATEGORIES } from '../core/constants.js';
-import { globalSseBroker } from '../server/sse.js';
 
 function notifyEvent(event) {
-  globalSseBroker.broadcast(event);
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3030;
   try {
     fetch(`http://127.0.0.1:${port}/api/access`, {

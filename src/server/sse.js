@@ -1,18 +1,8 @@
 export class SseBroker {
   constructor() {
     this.clients = new Set();
-    this.cumulativeTokensSaved = 4250;
-    this.history = [
-      {
-        id: 1,
-        nodeId: 'node-root',
-        label: 'Agent Core',
-        query: 'Initial Session Orientation',
-        agent: 'Pi / Claude',
-        time: new Date().toLocaleTimeString(),
-        tokensSaved: 1450
-      }
-    ];
+    this.cumulativeTokensSaved = 0;
+    this.history = [];
   }
 
   addClient(res) {

@@ -27,16 +27,13 @@ function readJsonSafe(filePath) {
     if (!raw.trim()) return {};
     return JSON.parse(raw);
   } catch {
-    // Try stripping comments and trailing commas before failing
     try {
-      const raw = fs.readFileSync(filePath, 'utf8');
-      const stripped = raw
-        .replace(/\/\*[\s\S]*?\*\//g, '')
-        .replace(/\/\/.*/g, '')
+      const stripped = fs.readFileSync(filePath, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '')
         .replace(/,\s*([}\]])/g, '$1');
       return JSON.parse(stripped);
     } catch {
-      return undefined; // Parse error on existing file
+      return undefined;
     }
   }
 }
@@ -142,6 +139,18 @@ export function detectEnvironmentAgents(cwd = process.cwd()) {
 }
 
 /**
+ * Returns platform-specific application config directory.
+ */
+function getPlatformConfigDir(appName) {
+  const home = os.homedir();
+  const platform = os.platform();
+  const appData = process.env.APPDATA || path.join(home, 'AppData', 'Roaming');
+  if (platform === 'darwin') return path.join(home, 'Library', 'Application Support', appName);
+  if (platform === 'win32') return path.join(appData, appName);
+  return path.join(home, '.config', appName);
+}
+
+/**
  * Returns platform-specific global configuration paths for various editors and agents.
  */
 function getGlobalAgentConfigs() {
@@ -149,92 +158,43 @@ function getGlobalAgentConfigs() {
   const platform = os.platform();
   const appData = process.env.APPDATA || path.join(home, 'AppData', 'Roaming');
 
-  const configs = [];
-
-  // 1. Claude Desktop
-  let claudeConfigPath;
-  if (platform === 'darwin') {
-    claudeConfigPath = path.join(home, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
-  } else if (platform === 'win32') {
-    claudeConfigPath = path.join(appData, 'Claude', 'claude_desktop_config.json');
-  } else {
-    claudeConfigPath = path.join(home, '.config', 'Claude', 'claude_desktop_config.json');
-  }
-  configs.push({
-    name: 'Claude Desktop',
-    agent: 'claude',
-    type: 'mcpServers',
-    path: claudeConfigPath,
-    global: true
-  });
-
-  // 2. Windsurf (Codeium)
-  let windsurfConfigPath;
-  if (platform === 'darwin' || platform === 'linux' || platform === 'win32') {
-    windsurfConfigPath = path.join(home, '.codeium', 'windsurf', 'mcp_config.json');
-  }
-  if (windsurfConfigPath) {
-    configs.push({
+  return [
+    {
+      name: 'Claude Desktop',
+      agent: 'claude',
+      type: 'mcpServers',
+      path: path.join(getPlatformConfigDir('Claude'), 'claude_desktop_config.json'),
+      global: true
+    },
+    {
       name: 'Windsurf',
       agent: 'windsurf',
       type: 'mcpServers',
-      path: windsurfConfigPath,
+      path: path.join(home, '.codeium', 'windsurf', 'mcp_config.json'),
       global: true
-    });
-  }
-
-  // 3. Zed Editor
-  let zedConfigPath;
-  if (platform === 'darwin' || platform === 'linux') {
-    zedConfigPath = path.join(home, '.config', 'zed', 'settings.json');
-  } else if (platform === 'win32') {
-    zedConfigPath = path.join(appData, 'Zed', 'settings.json');
-  }
-  if (zedConfigPath) {
-    configs.push({
+    },
+    {
       name: 'Zed Editor',
       agent: 'zed',
       type: 'zedContextServers',
-      path: zedConfigPath,
+      path: platform === 'win32' ? path.join(appData, 'Zed', 'settings.json') : path.join(home, '.config', 'zed', 'settings.json'),
       global: true
-    });
-  }
-
-  // 4. VS Code - Cline extension
-  let clineConfigPath;
-  if (platform === 'darwin') {
-    clineConfigPath = path.join(home, 'Library', 'Application Support', 'Code', 'User', 'globalStorage', 'saoudrizwan.claude-dev', 'settings', 'cline_mcp_settings.json');
-  } else if (platform === 'win32') {
-    clineConfigPath = path.join(appData, 'Code', 'User', 'globalStorage', 'saoudrizwan.claude-dev', 'settings', 'cline_mcp_settings.json');
-  } else {
-    clineConfigPath = path.join(home, '.config', 'Code', 'User', 'globalStorage', 'saoudrizwan.claude-dev', 'settings', 'cline_mcp_settings.json');
-  }
-  configs.push({
-    name: 'Cline (VS Code)',
-    agent: 'vscode',
-    type: 'mcpServers',
-    path: clineConfigPath,
-    global: true
-  });
-
-  // 5. VS Code - Roo Code extension
-  let rooConfigPath;
-  if (platform === 'darwin') {
-    rooConfigPath = path.join(home, 'Library', 'Application Support', 'Code', 'User', 'globalStorage', 'rooveterinaryinc.roo-cline', 'settings', 'cline_mcp_settings.json');
-  } else if (platform === 'win32') {
-    rooConfigPath = path.join(appData, 'Code', 'User', 'globalStorage', 'rooveterinaryinc.roo-cline', 'settings', 'cline_mcp_settings.json');
-  } else {
-    rooConfigPath = path.join(home, '.config', 'Code', 'User', 'globalStorage', 'rooveterinaryinc.roo-cline', 'settings', 'cline_mcp_settings.json');
-  }
-  configs.push({
-    name: 'Roo Code (VS Code)',
-    agent: 'vscode',
-    type: 'mcpServers',
-    path: rooConfigPath,
-    global: true
-  });
-
-  return configs;
+    },
+    {
+      name: 'Cline (VS Code)',
+      agent: 'vscode',
+      type: 'mcpServers',
+      path: path.join(getPlatformConfigDir('Code'), 'User', 'globalStorage', 'saoudrizwan.claude-dev', 'settings', 'cline_mcp_settings.json'),
+      global: true
+    },
+    {
+      name: 'Roo Code (VS Code)',
+      agent: 'vscode',
+      type: 'mcpServers',
+      path: path.join(getPlatformConfigDir('Code'), 'User', 'globalStorage', 'rooveterinaryinc.roo-cline', 'settings', 'cline_mcp_settings.json'),
+      global: true
+    }
+  ];
 }
 
 /**
